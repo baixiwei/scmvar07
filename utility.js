@@ -48,6 +48,15 @@ function capitalize( string ) {
     return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
+function dataToString( d ) {
+    var result = "";
+    for ( key in d ) {
+        result += key + ": " + d[key] + "; ";
+    }
+    result = result.slice( 0, result.length-2 );
+    return result;
+}
+
 //////////////////////////////////
 // Array Utilities
 //////////////////////////////////

@@ -23,54 +23,116 @@
 
 <script type="text/javascript">
 
-var offline = false;
-var table   = "scmvar_07";
-if ( turk ) { table += "_turk"; }
-if ( true ) { table += "_testing"; }    // change to false when going live
+var testing, offline, turk, accepted, sandbox, assignmentId, workerId, subjid, hitId, turkSubmitTo, data, table, exclude_tables;
+function setGlobalVars() {
 
-var turk            = ( gup( "assignmentId" ) != "" );
-var sandbox         = window.location.href.indexOf( "sandbox" ) != -1;
-var assignmentId    = gup( "assignmentId" );
-var accepted        = (assignmentId!="ASSIGNMENT_ID_NOT_AVAILABLE");
-var workerId        = gup( "workerId" );
-var hitId           = gup( "hitId" );
-var turkSubmitTo    = gup( "turkSubmitTo" );
+    var testing = true;         // change to false when going live
+    var offline = false;        // change to false when going live
 
-function checkExclusion() {
-    assignCondition();
+    var turk = ( gup( "assignmentId" ) != "" );
+    var accepted, sandbox, assignmentId, workerId, subjid, hitId, turkSubmitTo;
+    if ( turk ) {
+        accepted        = ( gup( "assignmentId" )!="ASSIGNMENT_ID_NOT_AVAILABLE" );
+        sandbox         = window.location.href.indexOf( "sandbox" ) != -1;
+        workerId        = gup( "workerId" );
+        subjid          = workerId;
+        hitId           = gup( "hitId" );
+        assignmentId    = gup( "assignmentId" );
+        turkSubmitTo    = gup( "turkSubmitTo" );
+    } else {
+        turk            = false;
+        accepted        = true;
+        subjid          = "NONTURK" + Math.floor(Math.random()*1000000000);
+    }
+
+    var data = turk ?
+        { "turk": turk.toString(), "sandbox": sandbox.toString(), "subjid": subjid, "workerId": workerId, "assignmentId": assignmentId } :
+        { "turk": turk.toString(), "subjid": subjid };
+    console.log( "index.html running. " + dataToString( data ) );
+
+    var table   = "scmvar_07";
+    if ( turk ) { table += "_turk"; }
+    if ( testing ) { table += "_testing"; }
+    
+    if ( turk ) {
+        checkExclusion();
+    } else {
+        assignCondAndSubCond();
+    }
+    
 }
 
-function assignCondition() {
-    var proceed = function( condition, subcondition ) {
-        console.log( "experiment.html > assignCondition > condition assigned: " + condition + "; subcondition assigned: " + subcondition);
+function checkExclusion() {
+    // TBD
+    assignCondAndSubCond();
+}
+
+function assignCondAndSubCond() {
+
+    var numcond     = 2;
+    var numsubcond  = 4;
+    var condition;
+    var subcondition;
+    
+    var assignCondition = function() {
+        if ( turk ) {
+            // if you are on turk, condition should be in the url
+            condition = gup( "condition" );
+            console.log( "experiment.html > assignCondition condition received from turk url: " + condition );
+            assignSubCondition();
+        } else if ( offline ) {
+            // if you are offline, determine a condition randomly
+            condition = Math.floor( Math.random() * numcond );
+            console.log( "experiment.html > assignCondition offline, so generated condition randomly: " + condition );
+            assignSubCondition();
+        } else {
+            // otherwise choose a condition to balance against those already in database
+            $.ajax({ type: 'post', cache: false, url: 'assign_condition.php',
+                data: { 'table': table, 'subjid': subjid, 'condition': condition, 'numcond': numcond },
+                success: function(data) {
+                    condition = data;
+                    console.log( "experiment.html > assignCondition used database call, generated condition: " + condition );
+                    assignSubCondition();
+                },
+                error: function(data) {
+                    condition = Math.floor( Math.random() * numsubcond );
+                    console.log( "experiment.html > assignCondition database call failed, generated subcondition: " + condition );
+                    assignSubCondition();
+                }});
+        }
+    }
+
+    var assignSubCondition = function() {
+        // next, assign subcondition, which determines the parameters of question presentation
+        if ( offline ) {
+            // if you are offline, determine a subcondition randomly
+            subcondition = Math.floor( Math.random() * numsubcond );
+            console.log( "experiment.html > assignSubCondition offline, so generated subcondition randomly: " + subcondition );
+            proceed();
+        } else {
+            // otherwise choose a subcondition to balance against those already in database
+            $.ajax({ type: 'post', cache: false, url: 'assign_subcondition.php',
+                data: { 'table': table, 'subjid': subjid, 'condition': condition, 'numsubcond': numsubcond },
+                success: function(data) {
+                    subcondition = data;
+                    console.log( "experiment.html > assignSubCondition used database call, generated subcondition: " + subcondition );
+                    proceed();
+                },
+                error: function(data) {
+                    subcondition = Math.floor( Math.random() * numsubcond );
+                    console.log( "experiment.html > assignSubCondition database call failed, generated subcondition: " + subcondition );
+                    proceed();
+                }});
+        }
+    }
+
+    var proceed = function() {
+        console.log( "experiment.html > assignCondAndSubCond > condition assigned: " + condition + "; subcondition assigned: " + subcondition);
         doHIT( condition, subcondition );
     }
-    // first, assign condition, which determines which pair of questions is presented
-    var condition, numcond=2;
+
+    assignCondition();
     
-    var condition;          // determines which pair of questions is presented; assigned by turk
-    var subcondition;       // determines parameters for presentation of questions; assigned locally
-    var numcond     = 2;    // number of question pairs
-    var numsubcond  = 4;    // number of parameter settings for question presentation
-    if ( offline ) {
-        console.log( "experiment.html > assignCondition offline, so generating condition randomly." );
-        var condition       = Math.floor( Math.random() * numcond );
-        var subcondition    = Math.floor( Math.random() * numsubcond );
-        proceed();
-    } else {
-        $.ajax({ type: 'post', cache: false, url: 'assign_subcondition.php',
-            data: { 'table': table, 'subjid': workerId, 'condition': condition, 'numsubcond': numcond },
-            success: function(data) {
-                console.log( "experiment.html > assignCondition succeeded: " + data );
-                condition = data;
-                proceed();
-            },
-            error: function(data) {
-                console.log( "experiment.html > assignCondition failed: " + data );
-                condition = Math.floor( Math.random() * numcond );
-                proceed();
-            }});
-    }
 }
 
 function doHIT( condition, subcondition ) {
@@ -83,10 +145,7 @@ function doHIT( condition, subcondition ) {
         ];
     var parameters = paramsBySubcondition[ subcondition ];
     
-    var data = $.extend( {
-        "turk": turk.toString(), "sandbox": sandbox.toString(), "subjid": workerId, "workerId": workerId, 
-        "hitId": hitId, "assignmentId": assignmentId, "condition": condition, "subcondition": subcondition
-        }, parameters );
+    data = $.extend( data, { "condition": condition, "subcondition": subcondition }, parameters );
     var start_time = (new Date()).getTime();
         
     var displayHIT = function() {
@@ -156,7 +215,8 @@ function doHIT( condition, subcondition ) {
     
 }
 
-checkExclusion();
+setGlobalVars();
+
 /*
 // global variables
 var offline;        // whether the database will be accessed at all
