@@ -1,0 +1,131 @@
+/*	css reset from:
+	http://meyerweb.com/eric/tools/css/reset/ 
+	v2.0 | 20110126
+	License: none (public domain)
+*/
+
+table {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	font-size: 100%;
+	font: inherit;
+	vertical-align: baseline;
+	border-collapse: collapse;
+	border-spacing: 0;
+}
+
+img {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	font-size: 100%;
+	font: inherit;
+	vertical-align: baseline;
+}
+
+/* general-purpose css */
+
+em {
+    background-color: #FFFF00
+}
+
+/* target is the id of the window where the experiment appears.
+Everything below target is contained inside target and so should be <= in size. */
+
+#target { 
+    width: 800px; 
+    margin-left:auto; 
+    margin-right:auto;
+    font-family: "Times New Roman", Times, serif;
+    font-size: 16px; 
+    text-align: left;
+}
+
+
+/* question and box are used to highlight instructional text in different ways. */
+
+.question{
+    border-style: solid;
+    border-width: 1px;
+    background-color: LightGrey;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.icon {
+    height: 60px;
+}
+
+.ui-widget {
+    font-family:"Times New Roman", Times, serif;
+    font-size: 18px;
+}
+
+.ui-state-default {
+    font-family:"Times New Roman", Times, serif;
+    font-size: 18px;
+}
+
+/* button styles */
+
+button.trial_button {
+    width: 350px;
+    text-align: center;
+    background: LightGrey;
+/*    height: 100px;
+    white-space: normal;*/
+}
+
+button.selected {
+    background: Yellow;
+}
+
+table.button-set {
+    table-layout: fixed;
+    width: 800px;
+    text-align: center;
+}
+
+table.matching-response {
+    table-layout: fixed;
+    width: 310px;
+    margin: 10px;
+    border-style: solid;
+    border-width: 1px;
+    background-color: white;
+}
+
+td.noun-cell {
+    border-style: solid;
+    border-width: 1px;
+    padding: 5px;
+    height: 40px;
+    vertical-align: center;
+}
+
+
+/* radio options */
+
+.input_hidden {
+    position: absolute;
+    left: -9999px;
+}
+/*
+#radio_options label.image {
+    display: inline-block;
+    cursor: pointer;
+    border-width: 5px;
+    border-style: solid;
+}
+
+#radio_options label.deselected {
+    border-color: white;
+}
+
+#radio_options label.selected {
+    border-color: blue;
+}
+*/
