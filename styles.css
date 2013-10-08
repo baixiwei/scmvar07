@@ -34,45 +34,35 @@ em {
 Everything below target is contained inside target and so should be <= in size. */
 
 #target { 
-    width: 800px; 
+    width: 750px; 
     margin-left:auto; 
     margin-right:auto;
     font-family: "Times New Roman", Times, serif;
-    font-size: 16px; 
+    font-size: 14px; 
     text-align: left;
 }
 
+/* styles for displaying questions during trials */
 
-/* question and box are used to highlight instructional text in different ways. */
+table.question_table {
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 3px 0px;
+}
 
-.question{
+table.question_table td {
+    width: 50%;
+    vertical-align: top;
     border-style: solid;
     border-width: 1px;
-    background-color: LightGrey;
-    margin-top: 10px;
-    margin-bottom: 10px;
-    padding-left: 10px;
-    padding-right: 10px;
+    background: LightGrey;
+    padding: 0px 10px 0px 10px;
 }
 
-.icon {
-    height: 60px;
-}
+/* styles for response buttons */
 
-.ui-widget {
-    font-family:"Times New Roman", Times, serif;
-    font-size: 18px;
-}
-
-.ui-state-default {
-    font-family:"Times New Roman", Times, serif;
-    font-size: 18px;
-}
-
-/* button styles */
-
-button.trial_button {
-    width: 350px;
+button.answer_button {
+    width: 750px;
     text-align: center;
     background: LightGrey;
 /*    height: 100px;
@@ -80,52 +70,25 @@ button.trial_button {
 }
 
 button.selected {
-    background: Yellow;
+    background: LightGreen;
 }
 
-table.button-set {
-    table-layout: fixed;
-    width: 800px;
-    text-align: center;
-}
+/* styles for content inside response buttons */
 
 table.matching-response {
     table-layout: fixed;
-    width: 310px;
-    margin: 10px;
+    width: 720px;
+    margin: 5px;
     border-style: solid;
     border-width: 1px;
     background-color: white;
 }
 
-td.noun-cell {
+table.matching-response tr{
     border-style: solid;
     border-width: 1px;
+}
+
+table.matching-response td{
     padding: 5px;
-    height: 40px;
-    vertical-align: center;
 }
-
-
-/* radio options */
-
-.input_hidden {
-    position: absolute;
-    left: -9999px;
-}
-/*
-#radio_options label.image {
-    display: inline-block;
-    cursor: pointer;
-    border-width: 5px;
-    border-style: solid;
-}
-
-#radio_options label.deselected {
-    border-color: white;
-}
-
-#radio_options label.selected {
-    border-color: blue;
-}
-*/

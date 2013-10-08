@@ -1,28 +1,34 @@
-function displayTrial( target_div, live, on_select, condition, parameters, data ) {
+function displayTrial( target_div, live, on_select, condition, subcondition, data ) {
 
     console.log( "displayTrial live: " + live );
 
     // generate trial specs and save their data
-    var specs = getTrialSpecs( condition, parameters );
+    var specs = getTrialSpecs( condition, subcondition );
+    
+    // save trial data to main data
     data = $.extend( data, specs.data );
     
     // display trial content to target div
     var content = "";
-    content     += specs.text;
-    content     += "<table><tr>";
+    // questions
+    content += "<table class='question_table'><tr>";
+    content += "<td><p><strong>Problem A:</strong></p>" + specs.questions[0].text + "</td>"
+    content += "<td><p><strong>Problem B:</strong></p>" + specs.questions[1].text + "</td>";
+    content += "</tr></table>";
+    // answers
+    content += "<p>Click on the button which best describes the way the elements of the two problems correspond to each other.</p>";
     for ( var i=0; i<specs.answers.length; i++ ) {
-        content += "<td><button id='button_" + specs.order[i] + "' type='button' class='trial_button'>" + specs.answers[specs.order[i]] + "</button></td>";
-        // content += "<td><button id='button_" + specs.order[i] + "' type='button' class='trial_button'>Test</button></td>";
+        content += "<p><button id='button_" + i + "' type='button' class='answer_button'>" + specs.answers[i] + "</button></p>";
     }
-    content     += "</tr></table>";
-    target_div.html( content );
     
+    target_div.html( content );
+
     // set button to react appropriately when clicked
     for ( var i=0; i<specs.answers.length; i++ ) {
-        $('#button_'+specs.order[i]).click( function() {
+        $('#button_'+i).click( function() {
             // highlight clicked button and un-highlight all others
             for ( var j=0; j<specs.answers.length; j++ ) {
-                $('#button_'+specs.order[j]).removeClass('selected');
+                $('#button_'+j).removeClass('selected');
             }
             $(this).addClass('selected');
             // record response and accuracy
@@ -63,41 +69,52 @@ function displayTrial( target_div, live, on_select, condition, parameters, data 
         
 }
 
-function getTrialSpecs( condition, parameters ) {
+function getTrialSpecs( condition, subcondition ) {
 
-    // retrieve a pair of questions (according to condition, TBD)
+    // determine parameters for question presentation based on subcondition
+    var paramsBySubcondition = [
+        { 'question_order': 0, 'answer_order': 0 },
+        { 'question_order': 0, 'answer_order': 1 },
+        { 'question_order': 1, 'answer_order': 0 },
+        { 'question_order': 1, 'answer_order': 1 }
+        ];
+    var parameters = paramsBySubcondition[ subcondition ];
+
+    // retrieve a pair of questions based on condition
     var question_list   = getQuestionList();
     var question_idxs   = getPairIdxs( question_list.length )[ condition ];
-    console.log( "condition: " + condition );
-    console.log( "question_idxs: " + question_idxs );
-    var questions       = [ question_list[question_idxs[0]], question_list[question_idxs[1]] ];
-    // order the questions according to parameters.question_order
-    var question_order  = parameters.question_order;
-    var question1       = questions[ question_order ];
-    var question2       = questions[ (question_order+1)%2 ];
-    // instantiate the questions
-    question1.instantiate();
-    question2.instantiate();
-    // put the questions together
-    var text    = "<p><strong>Problem A</strong></p>" + question1.text;
-    text        += "<p><strong>Problem B</strong></p>" + question2.text;
-    text        += "<p>Click the button which best describes how the elements of the two problems correspond to each other.</p>";
-
-    // create the answers, with the convention that the answer with index 0 is the correct one,
-    // and a vector indicating the order in which the answers should actually appear
-    var answers = [
-        createAnswer( question1.base_noun, question2.base_noun, question1.exp_noun, question2.exp_noun ),
-        createAnswer( question1.base_noun, question2.exp_noun, question1.exp_noun, question2.base_noun )
-        ];
-    var order   = [ [0,1], [1,0] ][ parameters.answer_order ];
+    var question_pair   = [ question_list[question_idxs[0]], question_list[question_idxs[1]] ];
+    question_pair[0].instantiate();
+    question_pair[1].instantiate();
     
-    var data = {
-        "question1_quesID": question1.quesID, "question1_schema": question1.schema, "question1_base_noun": question1.base_noun, "question1_exp_noun": question1.exp_noun,
-        "question2_quesID": question2.quesID, "question2_schema": question2.schema, "question2_base_noun": question2.base_noun, "question2_exp_noun": question2.exp_noun,
-        "key": 0
-        };
+    // create ordered array of questions based on params
+    var questions       = [ 
+        [ question_pair[0], question_pair[1] ],
+        [ question_pair[1], question_pair[0] ]
+        ][ parameters.question_order ];
         
-    return { "text": text, "answers": answers, "order": order, "data": data };
+    // create the answers based on the ordered questions
+    var answer_pair     = [
+        createAnswer( questions[0].base_noun, questions[1].base_noun, questions[0].exp_noun, questions[1].exp_noun ),
+        createAnswer( questions[0].base_noun, questions[1].exp_noun, questions[0].exp_noun, questions[1].base_noun )
+        ];
+        
+    // create ordered array of answers based on params
+    var answers         = [
+        [ answer_pair[0], answer_pair[1] ],
+        [ answer_pair[1], answer_pair[0] ]
+        ][ parameters.answer_order ];
+        
+    // create data object containing info about questions using their original order and info about params
+    var data = $.extend( {
+        "question1_quesID": questions[0].quesID, "question1_schema": questions[0].schema,
+        "question1_base_noun": questions[0].base_noun, "question1_exp_noun": questions[0].exp_noun,
+        "question2_quesID": questions[1].quesID, "question2_schema": questions[1].schema,
+        "question2_base_noun": questions[1].base_noun, "question2_exp_noun": questions[1].exp_noun
+        }, parameters, { "key": parameters.answer_order } );
+        
+    // return the specifications
+    return { "questions": questions, "answers": answers, "data": data };
         
 }
 
@@ -114,10 +131,8 @@ var getPairIdxs = function( n ) {
 
 var createAnswer = function( a, b, c, d ) {
     var result = "<table class='matching-response'>";
-    result  += "<tr><td>Problem A</td><td class='noun-cell'>" + a + "</td><td class='noun-cell'>" + c + "</td></tr>";
-    result  += "<tr><td></td><td><strong>&#8595</strong></td><td><strong>&#8595</strong></td></tr>";
-    // result  += "<tr><td></td><td>corresponds to</td><td>corresponds to</td></tr>";
-    result  += "<tr><td>Problem B</td><td class='noun-cell'>" + b + "</td><td class='noun-cell'>" + d + "</td></tr>";
+    result += "<tr><td>" + a + "<td>correspond to</td><td>" + b + "</td></tr>";
+    result += "<tr><td>" + c + "<td>correspond to</td><td>" + d + "</td></tr>";
     result  += "</table>";
     return result;
 }

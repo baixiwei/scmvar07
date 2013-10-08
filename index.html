@@ -26,11 +26,10 @@
 var testing, offline, turk, accepted, sandbox, assignmentId, workerId, subjid, hitId, turkSubmitTo, data, table, exclude_tables;
 function setGlobalVars() {
 
-    var testing = true;         // change to false when going live
-    var offline = false;        // change to false when going live
+    testing = true;         // change to false when going live
+    offline = false;        // change to false when going live
 
-    var turk = ( gup( "assignmentId" ) != "" );
-    var accepted, sandbox, assignmentId, workerId, subjid, hitId, turkSubmitTo;
+    turk = ( gup( "assignmentId" ) != "" );
     if ( turk ) {
         accepted        = ( gup( "assignmentId" )!="ASSIGNMENT_ID_NOT_AVAILABLE" );
         sandbox         = window.location.href.indexOf( "sandbox" ) != -1;
@@ -45,12 +44,12 @@ function setGlobalVars() {
         subjid          = "NONTURK" + Math.floor(Math.random()*1000000000);
     }
 
-    var data = turk ?
-        { "turk": turk.toString(), "sandbox": sandbox.toString(), "subjid": subjid, "workerId": workerId, "assignmentId": assignmentId } :
+    data = turk ?
+        { "turk": turk.toString(), "sandbox": sandbox.toString(), "hitId": hitId, "subjid": subjid, "workerId": workerId, "assignmentId": assignmentId } :
         { "turk": turk.toString(), "subjid": subjid };
     console.log( "index.html running. " + dataToString( data ) );
 
-    var table   = "scmvar_07";
+    table   = "scmvar_07";
     if ( turk ) { table += "_turk"; }
     if ( testing ) { table += "_testing"; }
     
@@ -78,12 +77,12 @@ function assignCondAndSubCond() {
         if ( turk ) {
             // if you are on turk, condition should be in the url
             condition = gup( "condition" );
-            console.log( "experiment.html > assignCondition condition received from turk url: " + condition );
+            console.log( "index.html > assignCondition condition received from turk url: " + condition );
             assignSubCondition();
         } else if ( offline ) {
             // if you are offline, determine a condition randomly
             condition = Math.floor( Math.random() * numcond );
-            console.log( "experiment.html > assignCondition offline, so generated condition randomly: " + condition );
+            console.log( "index.html > assignCondition offline, so generated condition randomly: " + condition );
             assignSubCondition();
         } else {
             // otherwise choose a condition to balance against those already in database
@@ -91,12 +90,12 @@ function assignCondAndSubCond() {
                 data: { 'table': table, 'subjid': subjid, 'condition': condition, 'numcond': numcond },
                 success: function(data) {
                     condition = data;
-                    console.log( "experiment.html > assignCondition used database call, generated condition: " + condition );
+                    console.log( "index.html > assignCondition used database call, generated condition: " + condition );
                     assignSubCondition();
                 },
                 error: function(data) {
                     condition = Math.floor( Math.random() * numsubcond );
-                    console.log( "experiment.html > assignCondition database call failed, generated subcondition: " + condition );
+                    console.log( "index.html > assignCondition database call failed, generated subcondition: " + condition );
                     assignSubCondition();
                 }});
         }
@@ -107,7 +106,7 @@ function assignCondAndSubCond() {
         if ( offline ) {
             // if you are offline, determine a subcondition randomly
             subcondition = Math.floor( Math.random() * numsubcond );
-            console.log( "experiment.html > assignSubCondition offline, so generated subcondition randomly: " + subcondition );
+            console.log( "index.html > assignSubCondition offline, so generated subcondition randomly: " + subcondition );
             proceed();
         } else {
             // otherwise choose a subcondition to balance against those already in database
@@ -115,19 +114,19 @@ function assignCondAndSubCond() {
                 data: { 'table': table, 'subjid': subjid, 'condition': condition, 'numsubcond': numsubcond },
                 success: function(data) {
                     subcondition = data;
-                    console.log( "experiment.html > assignSubCondition used database call, generated subcondition: " + subcondition );
+                    console.log( "index.html > assignSubCondition used database call, generated subcondition: " + subcondition );
                     proceed();
                 },
                 error: function(data) {
                     subcondition = Math.floor( Math.random() * numsubcond );
-                    console.log( "experiment.html > assignSubCondition database call failed, generated subcondition: " + subcondition );
+                    console.log( "index.html > assignSubCondition database call failed, generated subcondition: " + subcondition );
                     proceed();
                 }});
         }
     }
 
     var proceed = function() {
-        console.log( "experiment.html > assignCondAndSubCond > condition assigned: " + condition + "; subcondition assigned: " + subcondition);
+        console.log( "index.html > assignCondAndSubCond > condition assigned: " + condition + "; subcondition assigned: " + subcondition);
         doHIT( condition, subcondition );
     }
 
@@ -137,15 +136,7 @@ function assignCondAndSubCond() {
 
 function doHIT( condition, subcondition ) {
 
-    var paramsBySubcondition = [
-        { 'question_order': 0, 'answer_order': 0 },
-        { 'question_order': 0, 'answer_order': 1 },
-        { 'question_order': 1, 'answer_order': 0 },
-        { 'question_order': 1, 'answer_order': 1 }
-        ];
-    var parameters = paramsBySubcondition[ subcondition ];
-    
-    data = $.extend( data, { "condition": condition, "subcondition": subcondition }, parameters );
+    data = $.extend( data, { "condition": condition, "subcondition": subcondition } );
     var start_time = (new Date()).getTime();
         
     var displayHIT = function() {
@@ -157,12 +148,12 @@ function doHIT( condition, subcondition ) {
         content     += '</form>';
         $('#target').html( content );
         // set the submit button to appropriate text and action
-        $('#mTurkSubmitButton').val( accepted ? "Submit" : "You must ACCEPT the HIT before you can view the results." );
+        $('#mTurkSubmitButton').val( accepted ? "Submit HIT" : "You must ACCEPT the HIT before you can view the results." );
         $('#mTurkSubmitButton').click( submitData );
         $('#mTurkSubmitButton').attr( "disabled", "disabled" );
         var on_select = function() { $('#mTurkSubmitButton').removeAttr( "disabled" ); }
         // display the trial
-        displayTrial( $('#trial'), accepted, on_select, condition, parameters, data );
+        displayTrial( $('#trial'), accepted, on_select, condition, subcondition, data );
     }
     
     var submitData = function(e) {
@@ -170,22 +161,21 @@ function doHIT( condition, subcondition ) {
         e.preventDefault();
         // add rt to data
         data.rt = (new Date()).getTime() - start_time;
-        // put data in format expected by submit_data
-        data = [[data]];
         // submit data to our database, then to turk
         $.ajax( { type: 'post',
                   cache: false,
-                  url: 'submit_data.php',
+                  url: 'submit_data_row.php',
                   data: { 
                     'table': table,
                     'json': JSON.stringify(data) },
                   success: function(d) {
                     console.log( "submitData succeeded with result: " + d );
-                    submitHIT( data );
+                    console.log( JSON.stringify(data) );
+//                    submitHIT( data );
                   },
                   error: function(d) {
                     console.log( "submitData failed with error " + d.statusText );
-                    submitHIT( data );
+//                    submitHIT( data );
                   }
                 } );
                 
@@ -199,10 +189,11 @@ function doHIT( condition, subcondition ) {
                 $('#my_form').append( '<input type="hidden" id="' + key + '" name="' + key + '" value="">' );
                 $('#'+key).val( data[key] );
             }
+            console.log( "submitHIT assignmentId" + $('#assignmentId').val() );
             // submit the form to Turk
             var action = sandbox ?
-                "http://workersandbox.mturk.com/mturk/externalSubmit" :
-                "http://www.mturk.com/mturk/externalSubmit";
+                "https://workersandbox.mturk.com/mturk/externalSubmit" :
+                "https://www.mturk.com/mturk/externalSubmit";
             $('#my_form').attr( "action", action );
             $('#my_form').submit();
         } else {
@@ -282,8 +273,8 @@ function setGlobalVars() {
 
 function showEntrancePage() {
     setGlobalVars();
-    console.log( "experiment.html > setGlobalVars > offline: " + offline + "; mode: " + mode + "; skip: " + skip.toString() + "; testing: " + testing + "; subjid: " + subjid + "; condition: " + condition + "; turk: " + turk );
-    if ( turk ) { console.log( "experiment.html > setGlobalVars > turk info. sandbox: " + sandbox + "; assignmentId: " + assignmentId + "; workerId: " + workerId + "; hitId: " + hitId + "; turkSubmitTo: " + turkSubmitTo ); }
+    console.log( "index.html > setGlobalVars > offline: " + offline + "; mode: " + mode + "; skip: " + skip.toString() + "; testing: " + testing + "; subjid: " + subjid + "; condition: " + condition + "; turk: " + turk );
+    if ( turk ) { console.log( "index.html > setGlobalVars > turk info. sandbox: " + sandbox + "; assignmentId: " + assignmentId + "; workerId: " + workerId + "; hitId: " + hitId + "; turkSubmitTo: " + turkSubmitTo ); }
     var text = turk ? entrance_turk : entrance_nonturk;
     $('#target').html( text );
     console.log( $('#target').css( 'width' ) );
@@ -313,7 +304,7 @@ function checkExclusion() {
             url: 'exclude_subject.php',
             data: { 'subjid': subjid, 'tables': JSON.stringify(exclude_tables), 'table': table },
             success: function(data) {
-                console.log( "experiment.html > checkExclusion succeeded, result: " + data.toString() );
+                console.log( "index.html > checkExclusion succeeded, result: " + data.toString() );
                 if ( data==1 ) {
                     $('#target').html( '<p>Sorry, our records show that you have previously completed a related HIT for this requester.  Therefore, as stated on the first page, you are not eligible to do this HIT.  We apologize for the inconvenience.</p>' );
                 } else {
@@ -321,7 +312,7 @@ function checkExclusion() {
                 }
             },
             error: function(data) {
-                console.log( "experiment.html > checkExclusion > error: " + data.toString() );
+                console.log( "index.html > checkExclusion > error: " + data.toString() );
                 $('#target').html( '<p>The experiment failed to load for an unknown reason.  Unfortunately, you will be unable to complete this HIT.  We apologize for the inconvenience.</p>' ); 
             }
         } );
@@ -349,10 +340,10 @@ function runExperiment() {
         // TBD: add condition, turk info, etc.
         // prepend subject data to experimental data
         var final_data      = prependData( subj_data, exp_data );
-        console.log( "experiment.html > runExperiment jsPsych run complete. final data follows." );
+        console.log( "index.html > runExperiment jsPsych run complete. final data follows." );
         console.log( final_data );
         if ( offline ) {
-            console.log( "experiment.html > runExperiment in offline mode, skipping data submission." );
+            console.log( "index.html > runExperiment in offline mode, skipping data submission." );
             showExitPage( final_data );
         } else {
             $.ajax( { type: 'post',
@@ -362,11 +353,11 @@ function runExperiment() {
                         'table': table,
                         'json': JSON.stringify(final_data) },
                       success: function(data) {
-                        console.log( "experiment.html > runExperiment: submit_data succeeded." );
+                        console.log( "index.html > runExperiment: submit_data succeeded." );
                         showExitPage( final_data );
                       },
                       error: function(data) {
-                        console.log( "experiment.html > runExperiment: submit_data failed with error " + data.statusText );
+                        console.log( "index.html > runExperiment: submit_data failed with error " + data.statusText );
                         showExitPage( final_data );
                       }
                     } );
@@ -374,7 +365,7 @@ function runExperiment() {
     }
 
     // run the experiment
-    console.log( "experiment.html > runExperiment > starting experiment with exp_struct length " + exp_struct.length );
+    console.log( "index.html > runExperiment > starting experiment with exp_struct length " + exp_struct.length );
     start_time = new Date();
     jsPsych.init( target, { "experiment_structure": exp_struct, "plugins": plugins, "finish": finish } );
     
@@ -459,7 +450,7 @@ function setGlobalVars() {
     table       = testing ? "scmvar_05c_test" : "scmvar_05c";
     skip        = [];
     // available to skip: Intro, Pretest, Training, Posttest, Background
-    console.log( "experiment.html > setGlobalVars > override: " + override + "; turk: " + turk + "; sandbox: " + sandbox + "; offline: " + offline + "; testing: " + testing + "; mode: " + mode + "; subjid: " + subjid + "; table: " + table );
+    console.log( "index.html > setGlobalVars > override: " + override + "; turk: " + turk + "; sandbox: " + sandbox + "; offline: " + offline + "; testing: " + testing + "; mode: " + mode + "; subjid: " + subjid + "; table: " + table );
 }
 
 // showEntrancePage
@@ -508,7 +499,7 @@ function checkExclusion() {
         $.ajax( { type: 'post', cache: false, url: 'exclude_subject.php',
                   data: { 'subjid': subjid, 'tables': JSON.stringify(tables), 'table': table },
                   success: function(data) {
-                    console.log( "experiment.html > checkExclusion succeeded, result: " + data.toString() );
+                    console.log( "index.html > checkExclusion succeeded, result: " + data.toString() );
                     if ( data==1 ) {
                         $('#target').html( '<p>Sorry, our records show that you have previously completed a related HIT for this requester.  Therefore, as stated on the first page, you are not eligible to do this HIT.  We apologize for the inconvenience.</p>' );
                     } else {
@@ -516,7 +507,7 @@ function checkExclusion() {
                     }
                   },
                   error: function(data) {
-                    console.log( "experiment.html > checkExclusion > error: " + data.toString() );
+                    console.log( "index.html > checkExclusion > error: " + data.toString() );
                     $('#target').html( '<p>The experiment failed to load for an unknown reason.  Unfortunately, you will be unable to complete this HIT.  We apologize for the inconvenience.</p>' ); 
                   } 
                   } );
@@ -544,7 +535,7 @@ function assignCondition() {
     var numcond = 8;
     var condition;
     var proceed = function() {
-        console.log( "experiment.html > assignCondition > condition assigned: " + condition );
+        console.log( "index.html > assignCondition > condition assigned: " + condition );
         condition = Number(condition);
         runExperiment( condition );
     }
@@ -555,12 +546,12 @@ function assignCondition() {
         $.ajax({ type: 'post', cache: false, url: 'assign_condition.php',
             data: { 'table': table, 'numcond': numcond, 'subjid': subjid },
             success: function(data) {
-                console.log( "experiment.html > assignCondition succeeded: " + data );
+                console.log( "index.html > assignCondition succeeded: " + data );
                 condition = data;
                 proceed();
             },
             error: function(data) {
-                console.log( "experiment.html > assignCondition failed: " + data );
+                console.log( "index.html > assignCondition failed: " + data );
                 condition = Math.floor( Math.random() * numcond );
                 proceed();
             }});
@@ -580,7 +571,7 @@ function makeExpStruct( training, version, testseq ) {
     var exp_struct = [];
     var pretest_version  = testseq;
     var posttest_version = ((testseq+1)%2);
-    console.log( "experiment.html > makeExpStruct skipping these sections: " + skip.toString() );
+    console.log( "index.html > makeExpStruct skipping these sections: " + skip.toString() );
     if (skip.indexOf("Intro")==-1)      { addIntro( exp_struct ); }
     if (skip.indexOf("Pretest")==-1)    { addTest( exp_struct, pretest_version, "Pretest", mode ); }
     if (skip.indexOf("Training")==-1)   { addTraining( exp_struct, training, version, mode ); }
@@ -596,7 +587,7 @@ function runExperiment( condition ) {
     var training    = factors["training"];
     var version     = factors["version"];
     var testseq     = factors["testseq"];
-    console.log( "experiment.html > runExperiment > factors assigned. training: " + training + "; version: " + version + "; testseq: " + testseq );
+    console.log( "index.html > runExperiment > factors assigned. training: " + training + "; version: " + version + "; testseq: " + testseq );
     
     var exp_struct  = makeExpStruct( training, version, testseq );
     
@@ -604,7 +595,7 @@ function runExperiment( condition ) {
     var start_time          = new Date();
     var start_time_txt      = dateToString( start_time );
     
-    console.log( "experiment.html > runExperiment > starting experiment with exp_struct length " + exp_struct.length );
+    console.log( "index.html > runExperiment > starting experiment with exp_struct length " + exp_struct.length );
 
     // run the experiment
     jsPsych.init($('#target'), {
@@ -636,10 +627,10 @@ function runExperiment( condition ) {
                                     "start": start_time_txt, "end": end_time_txt, "time": Number(total_time_min),
                                     "test_correct": test_correct, "bonus": bonus };
             var final_data      = prependData( subj_data, data );
-            console.log( "experiment.html > runExperiment jsPsych run complete. final data follows." );
+            console.log( "index.html > runExperiment jsPsych run complete. final data follows." );
             console.log( final_data );
             if ( offline ) {
-                console.log( "experiment.html > runExperiment in offline mode, skipping data submission." );
+                console.log( "index.html > runExperiment in offline mode, skipping data submission." );
                 showExitPage( final_data );
             } else {
                 $.ajax( { type: 'post',
@@ -649,11 +640,11 @@ function runExperiment( condition ) {
                             'table': table,
                             'json': JSON.stringify(final_data) },
                           success: function(data) {
-                            console.log( "experiment.html > runExperiment: submit_data succeeded." );
+                            console.log( "index.html > runExperiment: submit_data succeeded." );
                             showExitPage( final_data );
                           },
                           error: function(data) {
-                            console.log( "experiment.html > runExperiment: submit_data failed with error " + data.statusText );
+                            console.log( "index.html > runExperiment: submit_data failed with error " + data.statusText );
                             showExitPage( final_data );
                           }
                         } );
