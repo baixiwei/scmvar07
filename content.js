@@ -1,9 +1,9 @@
-function displayTrial( target_div, live, on_select, condition, subcondition, data ) {
+function displayTrialContent( target_div, live, on_select, condition, parameters, data ) {
 
-    console.log( "displayTrial live: " + live );
+    console.log( "content.js > displayTrial called. live: " + live + ". condition: " + condition + ". parameters: " + dataToString( parameters ) + ". data: " + dataToString( data ) );
 
     // generate trial specs and save their data
-    var specs = getTrialSpecs( condition, subcondition );
+    var specs = getTrialSpecs( condition, parameters );
     
     // save trial data to main data
     data = $.extend( data, specs.data );
@@ -24,20 +24,26 @@ function displayTrial( target_div, live, on_select, condition, subcondition, dat
     target_div.html( content );
 
     // set button to react appropriately when clicked
-    for ( var i=0; i<specs.answers.length; i++ ) {
-        $('#button_'+i).click( function() {
-            // highlight clicked button and un-highlight all others
-            for ( var j=0; j<specs.answers.length; j++ ) {
-                $('#button_'+j).removeClass('selected');
-            }
-            $(this).addClass('selected');
-            // record response and accuracy
-            data.response = Number( $(this).attr('id').slice(7) );
-            data.accuracy = Number( data.response==data.key );
-            console.log( "response logged: " + data.response );
-            // call on_select (this can e.g. activate an external submit button)
-            on_select();
-            } );
+    if ( live ) {
+        for ( var i=0; i<specs.answers.length; i++ ) {
+            $('#button_'+i).click( function() {
+                // highlight clicked button and un-highlight all others
+                for ( var j=0; j<specs.answers.length; j++ ) {
+                    $('#button_'+j).removeClass('selected');
+                }
+                $(this).addClass('selected');
+                // record response and accuracy
+                data.response = Number( $(this).attr('id').slice(7) );
+                data.accuracy = Number( data.response==data.key );
+                console.log( "response logged: " + data.response );
+                // call on_select (this can e.g. activate an external submit button)
+                on_select();
+                } );
+        }
+    } else {
+        for ( var i=0; i<specs.answers.length; i++ ) {
+            $('#button_'+i).attr( 'disabled', 'disabled' );
+        }
     }
 
     /*
@@ -68,26 +74,92 @@ function displayTrial( target_div, live, on_select, condition, subcondition, dat
     */
         
 }
+/*
+function generateRandomParameters() {
+    var params = {};
+    var numbers;
+    params[ 'subcondition'   ]  = Math.floor( Math.random()*4 );
+    params[ 'question_order' ]  = [ 0, 0, 1, 1 ][ params.subcondition ];
+    params[ 'answer_order'   ]  = [ 0, 1, 0, 1 ][ params.subcondition ];
+    params[ 'q1_order'       ]  = Math.floor( Math.random()*2 );
+    numbers = generateNumbers();
+    params[ 'q1_base_num'    ]  = numbers[0];
+    params[ 'q1_exp_num'     ]  = numbers[1];
+    params[ 'q2_order'       ]  = Math.floor( Math.random()*2 );
+    numbers = generateNumbers();
+    params[ 'q2_base_num'    ]  = numbers[0];
+    params[ 'q2_exp_num'     ]  = numbers[1];
+    return params;
+}
+*/
 
-function getTrialSpecs( condition, subcondition ) {
 
-    // determine parameters for question presentation based on subcondition
-    var paramsBySubcondition = [
-        { 'question_order': 0, 'answer_order': 0 },
-        { 'question_order': 0, 'answer_order': 1 },
-        { 'question_order': 1, 'answer_order': 0 },
-        { 'question_order': 1, 'answer_order': 1 }
-        ];
-    var parameters = paramsBySubcondition[ subcondition ];
+/////////////////////////////////////////////
+// random parameter generation for trials
+/////////////////////////////////////////////
+
+function generateRandomParameters() {
+    var params = {};
+    var numbers;
+    params[ 'subcondition'   ]  = Math.floor( Math.random()*4 );
+    params[ 'question_order' ]  = [ 0, 0, 1, 1 ][ params.subcondition ];
+    params[ 'answer_order'   ]  = [ 0, 1, 0, 1 ][ params.subcondition ];
+    params[ 'q1_order'       ]  = Math.floor( Math.random()*2 );
+    numbers = generateNumbers();
+    params[ 'q1_base_num'    ]  = numbers[0];
+    params[ 'q1_exp_num'     ]  = numbers[1];
+    params[ 'q2_order'       ]  = Math.floor( Math.random()*2 );
+    numbers = generateNumbers();
+    params[ 'q2_base_num'    ]  = numbers[0];
+    params[ 'q2_exp_num'     ]  = numbers[1];
+    return params;
+}
+
+// generateNumbers
+//      returns a pair of numbers in [3,9] both of which are different
+//      from both of those returned the last time it was called
+var prev_numbers = [ 0, 0 ];
+function generateNumbers() {
+    // randIntExclude: return an integer in [m,n] but not in l
+    function randIntExclude(m,n,l) {
+        var result = m + Math.floor( Math.random() * (n-m+1) )
+        var okay = true;
+        for ( var i=0; i<l.length; i++ ) {
+            if ( result == l[i] ) {
+                okay = false;
+            }
+        }
+        if ( okay ) {
+            return result;
+        } else {
+            return randIntExclude(m,n,l);
+        }
+    }
+
+    var new_numbers = [ 0, 0 ];
+    new_numbers[0]  = randIntExclude( 3, 9, prev_numbers );
+    new_numbers[1]  = randIntExclude( 3, 9, prev_numbers.concat( [ new_numbers[0] ] ) );
+    prev_numbers    = new_numbers;
+    return prev_numbers;
+}
+
+
+/////////////////////////////////////////////
+// generation of trial specifications
+/////////////////////////////////////////////
+
+function getTrialSpecs( condition, parameters ) {
 
     // retrieve a pair of questions based on condition
     var question_list   = getQuestionList();
     var question_idxs   = getPairIdxs( question_list.length )[ condition ];
     var question_pair   = [ question_list[question_idxs[0]], question_list[question_idxs[1]] ];
-    question_pair[0].instantiate();
-    question_pair[1].instantiate();
     
-    // create ordered array of questions based on params
+    // instantiate the questions based on the relevant parameters
+    question_pair[0].instantiate( parameters.q1_order, parameters.q1_base_num, parameters.q1_exp_num );
+    question_pair[1].instantiate( parameters.q2_order, parameters.q2_base_num, parameters.q2_exp_num );
+    
+    // order the questions based on parameters.question_order
     var questions       = [ 
         [ question_pair[0], question_pair[1] ],
         [ question_pair[1], question_pair[0] ]
@@ -105,13 +177,13 @@ function getTrialSpecs( condition, subcondition ) {
         [ answer_pair[1], answer_pair[0] ]
         ][ parameters.answer_order ];
         
-    // create data object containing info about questions using their original order and info about params
+    // create data object containing info about questions using their original order, and an answer key
     var data = $.extend( {
-        "question1_quesID": questions[0].quesID, "question1_schema": questions[0].schema,
-        "question1_base_noun": questions[0].base_noun, "question1_exp_noun": questions[0].exp_noun,
-        "question2_quesID": questions[1].quesID, "question2_schema": questions[1].schema,
-        "question2_base_noun": questions[1].base_noun, "question2_exp_noun": questions[1].exp_noun
-        }, parameters, { "key": parameters.answer_order } );
+        "q1_quesID": question_pair[0].quesID, "q1_schema": question_pair[0].schema,
+        "q1_base_noun": question_pair[0].base_noun, "q1_exp_noun": question_pair[0].exp_noun,
+        "q2_quesID": question_pair[1].quesID, "q2_schema": question_pair[1].schema,
+        "q2_base_noun": question_pair[1].base_noun, "q2_exp_noun": question_pair[1].exp_noun
+        }, { "key": parameters.answer_order } );
         
     // return the specifications
     return { "questions": questions, "answers": answers, "data": data };
@@ -157,46 +229,11 @@ Question = function( schema, quesID, base_noun, exp_noun, base_label, exp_label,
     this.instantiate    = instantiateQuestion;
 }
 
-// generateNumbers
-//      returns a pair of numbers in [3,9] both of which are different
-//      from both of those returned the last time it was called
-var prev_numbers = [ 0, 0 ];
-function generateNumbers() {
-    // randIntExclude: return an integer in [m,n] but not in l
-    function randIntExclude(m,n,l) {
-        var result = m + Math.floor( Math.random() * (n-m+1) )
-        var okay = true;
-        for ( var i=0; i<l.length; i++ ) {
-            if ( result == l[i] ) {
-                okay = false;
-            }
-        }
-        if ( okay ) {
-            return result;
-        } else {
-            return randIntExclude(m,n,l);
-        }
-    }
-
-    var new_numbers = [ 0, 0 ];
-    new_numbers[0]  = randIntExclude( 3, 9, prev_numbers );
-    new_numbers[1]  = randIntExclude( 3, 9, prev_numbers.concat( [ new_numbers[0] ] ) );
-    prev_numbers    = new_numbers;
-    return prev_numbers;
-}
-
 // instantiateQuestion: method of Question class
-//      gives Question object attributes needed to serve as a parameter spec for jspsych-scmvar plugin
-//      namely: text_list, answer_list, and key_list
-var instantiateQuestion = function() {
-    // randomize question params
-    var numbers, base_num, exp_num, order, fillers;
-    numbers     = generateNumbers();
-    base_num    = numbers[0];
-    exp_num     = numbers[1];
-    order       = Math.floor( Math.random() * 2 );
-    fillers     = [ [base_num, this.base_noun, exp_num, this.exp_noun], [exp_num, this.exp_noun, base_num, this.base_noun] ][ order ];
-    // set text, answers, and key
+//  earlier versions generated parameters for question presentation,
+//  but this revised version just takes given parameters and creates question text
+var instantiateQuestion = function( order, base_num, exp_num ) {
+    var fillers = [ [base_num, this.base_noun, exp_num, this.exp_noun], [exp_num, this.exp_noun, base_num, this.base_noun] ][ order ];
     this.text   = "<div class='question'>" + (this.text_long.format( fillers )) + "</div>";
     return this;
 }

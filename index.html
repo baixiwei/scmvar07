@@ -23,31 +23,34 @@
 
 <script type="text/javascript">
 
-var testing, offline, turk, accepted, sandbox, assignmentId, workerId, subjid, hitId, turkSubmitTo, data, table, exclude_tables;
+var testing, offline;                               // controls whether/which database is accessed
+var turk, accepted, sandbox;                        // whether on turk, and if so, whether HIT accepted, whether in sandbox
+var hitId, assignmentId, workerId, turkSubmitTo;    // other information necessary for turk
+var subjid, trial_data, table, exclude_tables;      // information needed regardless of whether on turk or not
+
 function setGlobalVars() {
 
     testing = true;         // change to false when going live
-    offline = false;        // change to false when going live
 
     turk = ( gup( "assignmentId" ) != "" );
     if ( turk ) {
+        offline         = false;
         accepted        = ( gup( "assignmentId" )!="ASSIGNMENT_ID_NOT_AVAILABLE" );
         sandbox         = window.location.href.indexOf( "sandbox" ) != -1;
-        workerId        = gup( "workerId" );
-        subjid          = workerId;
         hitId           = gup( "hitId" );
         assignmentId    = gup( "assignmentId" );
+        workerId        = gup( "workerId" );
         turkSubmitTo    = gup( "turkSubmitTo" );
+        subjid          = workerId;
     } else {
-        turk            = false;
-        accepted        = true;
+        offline         = true;        // change to false when going live
         subjid          = "NONTURK" + Math.floor(Math.random()*1000000000);
     }
 
-    data = turk ?
-        { "turk": turk.toString(), "sandbox": sandbox.toString(), "hitId": hitId, "subjid": subjid, "workerId": workerId, "assignmentId": assignmentId } :
+    trial_data = turk ?
+        { "turk": turk.toString(), "sandbox": sandbox.toString(), "hitId": hitId, "assignmentId": assignmentId, "workerId": workerId, "subjid": subjid } :
         { "turk": turk.toString(), "subjid": subjid };
-    console.log( "index.html running. " + dataToString( data ) );
+    console.log( "index.html > setGlobalVars. " + dataToString( trial_data ) );
 
     table   = "scmvar_07";
     if ( turk ) { table += "_turk"; }
@@ -56,90 +59,85 @@ function setGlobalVars() {
     if ( turk ) {
         checkExclusion();
     } else {
-        assignCondAndSubCond();
+        assignCondition();
     }
     
 }
 
 function checkExclusion() {
     // TBD
-    assignCondAndSubCond();
-}
-
-function assignCondAndSubCond() {
-
-    var numcond     = 2;
-    var numsubcond  = 4;
-    var condition;
-    var subcondition;
-    
-    var assignCondition = function() {
-        if ( turk ) {
-            // if you are on turk, condition should be in the url
-            condition = gup( "condition" );
-            console.log( "index.html > assignCondition condition received from turk url: " + condition );
-            assignSubCondition();
-        } else if ( offline ) {
-            // if you are offline, determine a condition randomly
-            condition = Math.floor( Math.random() * numcond );
-            console.log( "index.html > assignCondition offline, so generated condition randomly: " + condition );
-            assignSubCondition();
-        } else {
-            // otherwise choose a condition to balance against those already in database
-            $.ajax({ type: 'post', cache: false, url: 'assign_condition.php',
-                data: { 'table': table, 'subjid': subjid, 'condition': condition, 'numcond': numcond },
-                success: function(data) {
-                    condition = data;
-                    console.log( "index.html > assignCondition used database call, generated condition: " + condition );
-                    assignSubCondition();
-                },
-                error: function(data) {
-                    condition = Math.floor( Math.random() * numsubcond );
-                    console.log( "index.html > assignCondition database call failed, generated subcondition: " + condition );
-                    assignSubCondition();
-                }});
-        }
-    }
-
-    var assignSubCondition = function() {
-        // next, assign subcondition, which determines the parameters of question presentation
-        if ( offline ) {
-            // if you are offline, determine a subcondition randomly
-            subcondition = Math.floor( Math.random() * numsubcond );
-            console.log( "index.html > assignSubCondition offline, so generated subcondition randomly: " + subcondition );
-            proceed();
-        } else {
-            // otherwise choose a subcondition to balance against those already in database
-            $.ajax({ type: 'post', cache: false, url: 'assign_subcondition.php',
-                data: { 'table': table, 'subjid': subjid, 'condition': condition, 'numsubcond': numsubcond },
-                success: function(data) {
-                    subcondition = data;
-                    console.log( "index.html > assignSubCondition used database call, generated subcondition: " + subcondition );
-                    proceed();
-                },
-                error: function(data) {
-                    subcondition = Math.floor( Math.random() * numsubcond );
-                    console.log( "index.html > assignSubCondition database call failed, generated subcondition: " + subcondition );
-                    proceed();
-                }});
-        }
-    }
-
-    var proceed = function() {
-        console.log( "index.html > assignCondAndSubCond > condition assigned: " + condition + "; subcondition assigned: " + subcondition);
-        doHIT( condition, subcondition );
-    }
-
     assignCondition();
-    
 }
 
-function doHIT( condition, subcondition ) {
+function assignCondition() {
+    var numcond = 2;
+    var condition;
+    if ( turk ) {
+        // if you are on turk, condition should be in the url
+        condition = gup( "condition" );
+        console.log( "index.html > assignCondition condition received from turk url: " + condition );
+        assignParameters( condition );
+    } else if ( offline ) {
+        // if you are offline, determine a condition randomly
+        condition = Math.floor( Math.random() * numcond );
+        console.log( "index.html > assignCondition offline, so generated condition randomly: " + condition );
+        assignParameters( condition );
+    } else {
+        // otherwise choose a condition to balance against those already in database
+        $.ajax({ type: 'post', cache: false, url: 'assign_condition.php',
+            data: { 'table': table, 'subjid': subjid, 'condition': condition, 'numcond': numcond },
+            success: function(data) {
+                condition = data;
+                console.log( "index.html > assignCondition used database call, generated condition: " + condition );
+                assignParameters( condition );
+            },
+            error: function(data) {
+                condition = Math.floor( Math.random() * numsubcond );
+                console.log( "index.html > assignCondition database call failed, generated subcondition: " + condition );
+                assignParameters( condition );
+            }});
+    }
+}
 
-    data = $.extend( data, { "condition": condition, "subcondition": subcondition } );
-    var start_time = (new Date()).getTime();
+function assignParameters( condition ) {
+    var parameters;
+    var proceed = function() {
+        console.log( "index.html > assignParameters. " + dataToString( parameters ) );
+        trial_data = $.extend( trial_data, { "condition": condition }, parameters );
+        doTrial( condition, parameters );
+    }
+//    if ( offline ) {
+    if ( true ) {
+        // if offline, generate parameters randomly
+        parameters = generateRandomParameters();
+        proceed();
+    } else {
+        // otherwise, consult database to see whether params were already assigned for this subj & condition
+        // (this should only ever happen in turk)
+        // if so, just use the previously assigned params
+        // if no, then new params will be generated, balancing against previous param assignments in the given condition,
+        // and these assignments will be saved to the database so it should only happen once per subj & condition
+        $.ajax( { type: 'post', cache: false, url: 'assign_parameters.php',
+            data: { 'table': table, 'subjid': subjid, 'condition': condition },
+            success: function( data ) {
+                parameters = JSON.parse( data );
+                console.log( "index.html > assignParameters generated parameters using database: " + parameters );
+                proceed();
+                },
+            error: function( data ) {
+                console.log( "index.html > assignParameters failed: " + data );
+                parameters = generateRandomParameters();
+                console.log( "index.html > assignParameters generated random parameters: " + parameters );
+                proceed();
+            } } );
+    }
+}
+
+function doTrial( condition, parameters ) {
+
+    var start_time = new Date();
         
-    var displayHIT = function() {
+    var displayTrial = function() {
         // create submission form and post it to target
         var content = '';
         content     += '<div id="trial"></div>';
@@ -148,62 +146,72 @@ function doHIT( condition, subcondition ) {
         content     += '</form>';
         $('#target').html( content );
         // set the submit button to appropriate text and action
-        $('#mTurkSubmitButton').val( accepted ? "Submit HIT" : "You must ACCEPT the HIT before you can view the results." );
+        var submit_txt, live;
+        if ( turk ) {
+            submit_txt = accepted ?  "Submit HIT" : "You must click ACCEPT before you can do this HIT.";
+            live = accepted;
+        } else {
+            submit_txt = "Submit";
+            live = true;
+        }   
+        $('#mTurkSubmitButton').val( submit_txt );
         $('#mTurkSubmitButton').click( submitData );
         $('#mTurkSubmitButton').attr( "disabled", "disabled" );
         var on_select = function() { $('#mTurkSubmitButton').removeAttr( "disabled" ); }
         // display the trial
-        displayTrial( $('#trial'), accepted, on_select, condition, subcondition, data );
+        displayTrialContent( $('#trial'), live, on_select, condition, parameters, trial_data );
     }
     
     var submitData = function(e) {
         // prevent from submitting the form by default
         e.preventDefault();
-        // add rt to data
-        data.rt = (new Date()).getTime() - start_time;
-        // submit data to our database, then to turk
-        $.ajax( { type: 'post',
-                  cache: false,
-                  url: 'submit_data_row.php',
-                  data: { 
-                    'table': table,
-                    'json': JSON.stringify(data) },
-                  success: function(d) {
-                    console.log( "submitData succeeded with result: " + d );
-                    console.log( JSON.stringify(data) );
-//                    submitHIT( data );
-                  },
-                  error: function(d) {
-                    console.log( "submitData failed with error " + d.statusText );
-//                    submitHIT( data );
-                  }
-                } );
-                
-    }
-    
-    var submitHIT = function() {
-        if ( turk ) {
-            // add data as hidden fields to the form so these will submit to turk
-            // NOTE: assignmentId must be included here so Turk will recognize the completed assignment
-            for ( key in data ) {
-                $('#my_form').append( '<input type="hidden" id="' + key + '" name="' + key + '" value="">' );
-                $('#'+key).val( data[key] );
-            }
-            console.log( "submitHIT assignmentId" + $('#assignmentId').val() );
-            // submit the form to Turk
-            var action = sandbox ?
-                "https://workersandbox.mturk.com/mturk/externalSubmit" :
-                "https://www.mturk.com/mturk/externalSubmit";
-            $('#my_form').attr( "action", action );
-            $('#my_form').submit();
+        // add start and end times and rt to data
+        var end_time            = new Date();
+        trial_data.start_time   = start_time.toString();
+        trial_data.end_time     = end_time.toString();
+        trial_data.rt           = end_time.getTime() - start_time.getTime();
+        if ( offline || (!turk) ) {
+            // if offline, or not on turk, just display the data
+            // if you ever run this outside of turk for real, you'll want something different to happen here.
+            $('#target').html( JSON.stringify(trial_data) );
         } else {
-            // if not on turk, just display the data
-            $('#target').html( JSON.stringify(data) );
+            // submit data to our database, then to turk
+            $.ajax( { type: 'post',
+                      cache: false,
+                      url: 'submit_data_row.php',
+                      data: { 
+                        'table': table,
+                        'json': JSON.stringify(trial_data) },
+                      success: function(d) {
+                        console.log( "submitData succeeded with result: " + d );
+                        submitHIT();
+                      },
+                      error: function(d) {
+                        console.log( "submitData failed with error " + d.statusText );
+                        submitHIT();
+                      }
+                    } );
         }
     }
     
-    displayHIT();
+    displayTrial();
     
+}
+
+var submitHIT = function() {
+    // add data as hidden fields to the form so these will submit to turk
+    // NOTE: assignmentId must be included here so Turk will recognize the completed assignment
+    for ( key in trial_data ) {
+        $('#my_form').append( '<input type="hidden" id="' + key + '" name="' + key + '" value="">' );
+        $('#'+key).val( trial_data[key] );
+    }
+    console.log( "submitHIT assignmentId: " + $('#assignmentId').val() );
+    // submit the form to Turk
+    var action = sandbox ?
+        "https://workersandbox.mturk.com/mturk/externalSubmit" :
+        "https://www.mturk.com/mturk/externalSubmit";
+    $('#my_form').attr( "action", action );
+    $('#my_form').submit();
 }
 
 setGlobalVars();
@@ -222,54 +230,6 @@ var condition;      // condition: a number indicating assigned experimental cond
 
 // global variables only used if the participant is from Mechanical Turk
 var sandbox, assignmentId, workerId, hitId, turkSubmitTo;
-
-function setGlobalVars() {
-
-    // set variables that determine the mode in which the experiment runs
-    if ( true ) {  // set to true for a quick switch to testing settings, otherwise false for "normal" settings
-        offline         = false;
-        mode            = "free";
-        skip            = [];
-        testing         = true;
-    } else {
-        offline         = false;
-        mode            = "forced";
-        skip            = [];
-        testing         = false;
-    }
-    
-    // determine whether we are in turk and, if so, set relevant global vars
-    turk = ( gup( "assignmentId" ) != '' );
-    if ( turk ) {
-        sandbox         = window.location.href.indexOf( "sandbox" ) != -1;
-        assignmentId    = gup( "assignmentId" );
-        workerId        = gup( "workerId" );
-        hitId           = gup( "hitId" );
-        turkSubmitTo    = gup( "turkSubmitTo" );
-    }
-    
-    // set variables that deal with MySQL tables
-    if ( testing ) {
-        table           = "scmvar_07_test";
-        exclude_tables  = [];
-    } else if ( turk ) {
-        table           = "scmvar_07_turk";
-        exclude_tables  = [ "scmvar_02_turk", "scmvar_03", "scmvar_04", "scmvar_04_test", "scmvar_04_turk", "scmvar_05", "scmvar_05b", "scmvar_05c", "scmvar_06", "scmvar_06_test" ];
-    } else {
-        table           = "scmvar_07";
-        exclude_tables  = [];
-    }
-    
-    // if in turk, set subjid and condition from href; otherwise determine randomly (placeholder)
-    var num_conditions = 1;
-    if ( turk ) {
-        subjid          = workerId;
-        condition       = gup( "condition" );
-    } else {
-        subjid          = ("NONTURK" + Math.floor( Math.random()*1000000000 ));
-        condition       = Math.floor( Math.random()*num_conditions );
-    }
-}
 
 function showEntrancePage() {
     setGlobalVars();
@@ -317,73 +277,6 @@ function checkExclusion() {
             }
         } );
     }
-}
-
-function runExperiment() {
-
-    // info to be used by jspsych
-    var target          = $('#target');
-    var exp_struct      = makeExpStruct( mode );
-    var plugins         = [ { "type": "button_choice", "src": "jspsych-button-choice.js" } ];
-    var start_time;
-    
-    // function to be called when jspsych completes
-    var finish = function( exp_data ) {
-        // record end time
-        var end_time        = new Date();
-        // calculate number correct and appropriate bonus for turkers
-        // TBD
-        // create subject data object
-        var subj_data       = {
-            "start": dateToString(start_time), "end": dateToString(end_time), "time": ((end_time.getTime()-start_time.getTime())/(60*1000)).toFixed(2)
-            };
-        // TBD: add condition, turk info, etc.
-        // prepend subject data to experimental data
-        var final_data      = prependData( subj_data, exp_data );
-        console.log( "index.html > runExperiment jsPsych run complete. final data follows." );
-        console.log( final_data );
-        if ( offline ) {
-            console.log( "index.html > runExperiment in offline mode, skipping data submission." );
-            showExitPage( final_data );
-        } else {
-            $.ajax( { type: 'post',
-                      cache: false,
-                      url: 'submit_data.php',
-                      data: { 
-                        'table': table,
-                        'json': JSON.stringify(final_data) },
-                      success: function(data) {
-                        console.log( "index.html > runExperiment: submit_data succeeded." );
-                        showExitPage( final_data );
-                      },
-                      error: function(data) {
-                        console.log( "index.html > runExperiment: submit_data failed with error " + data.statusText );
-                        showExitPage( final_data );
-                      }
-                    } );
-        }
-    }
-
-    // run the experiment
-    console.log( "index.html > runExperiment > starting experiment with exp_struct length " + exp_struct.length );
-    start_time = new Date();
-    jsPsych.init( target, { "experiment_structure": exp_struct, "plugins": plugins, "finish": finish } );
-    
-}
-
-function prependData( subjdata, expdata ) {
-    var block;
-    var trial;
-    var result = new Array( expdata.length );
-    for ( var i=0; i<expdata.length; i++ ) {
-        block = expdata[i];
-        result[i] = new Array( block.length );
-        for ( var j=0; j<block.length; j++ ) {
-            trial = block[j];
-            result[i][j] = $.extend( {},subjdata,trial );
-        }
-    }
-    return result;
 }
 
 function showExitPage( final_data ) {
