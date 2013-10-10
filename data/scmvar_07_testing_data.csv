@@ -1,0 +1,6 @@
+"id","turk","sandbox","subjid","workerId","hitId","assignmentId","condition","question_order","answer_order","question1_quesID","question1_schema","question1_base_noun","question1_exp_noun","question1_base_num","question1_exp_num","question2_quesID","question2_schema","question2_base_noun","question2_exp_noun","question2_base_num","question2_exp_num","key","response","accuracy","rt"
+"1","","","","","","","0","1","1","2","PCO","pizza brands","consumers","","","1","PCO","meals","friends","","","0","1","","2547"
+"2","","","","","","","2","1","1","4","PCO","types of toy","children","","","1","PCO","meals","friends","","","0","1","0","2662"
+"3","","","","","","","3","0","0","1","PCO","meals","friends","","","5","PCO","stocks","bankers","","","0","0","1","2631"
+"4","","","","","","","1","1","1","3","PCO","possible majors","students","","","1","PCO","meals","friends","","","0","1","0","21535"
+"5","false","","","","","","2","1","0","4","PCO","types of toy","children","","","1","PCO","meals","friends","","","0","0","1","5145"

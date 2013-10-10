@@ -195,3 +195,98 @@ function gup( name )
     return results[1];
 }
 
+
+// functions dealing with cookies / local storage
+
+function are_cookies_enabled() {
+	var cookieEnabled = (navigator.cookieEnabled) ? true : false;
+
+	if (typeof navigator.cookieEnabled == "undefined" && !cookieEnabled)
+	{ 
+		document.cookie="testcookie";
+		cookieEnabled = (document.cookie.indexOf("testcookie") != -1) ? true : false;
+	}
+	return (cookieEnabled);
+}
+
+function readCookie(name) {
+	var nameEQ = name + "=";
+	var ca = document.cookie.split(';');
+	for(var i=0;i < ca.length;i++) {
+		var c = ca[i];
+		while (c.charAt(0)==' ') c = c.substring(1,c.length);
+		if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+	}
+	return null;
+}
+
+function createCookie(name,value,days) {
+	if (days) {
+		var date = new Date();
+		date.setTime(date.getTime()+(days*24*60*60*1000));
+		var expires = "; expires="+date.toGMTString();
+	}
+	else var expires = "";
+	document.cookie = name+"="+value+expires+"; path=/";
+}
+
+function eraseCookie(name) {
+	createCookie(name,"",-1);
+}
+
+function checkLocalStorage( key, value ) {
+    if ( localStorage ) {
+    // if ( localStorage && false ) {  // testing only
+        return localStorage.getItem( key )==value;
+    } else if ( are_cookies_enabled() ) {
+        return readCookie( key )==value;
+    } else {
+        return false;
+    }
+}
+
+function getLocalStorage( keys ) {
+    var result = {};
+    if ( localStorage ) {
+    // if ( localStorage && false ) {  // testing only
+        console.log( "getLocalStorage retrieving information from local storage." );
+        for ( var i=0; i<keys.length; i++ ) {
+            result[ keys[i] ] = localStorage.getItem( keys[i] );
+        }
+    } else if ( are_cookies_enabled() ) {
+        console.log( "getLocalStorage retrieving information from cookies." );
+        for ( var i=0; i<keys.length; i++ ) {
+            result[ keys[i] ] = readCookie( keys[i] );
+        }
+    } else {
+        console.log( "getLocalStorage failed: local storage not supported." );
+    }
+    return result;
+}
+
+function setLocalStorage( arr ) {
+    if ( localStorage ) {
+    // if ( localStorage && false ) {  // testing only
+        console.log( "setLocalStorage saving information to local storage." );
+        for ( var key in arr ) { localStorage[ key ] = arr[ key ]; }
+    } else if ( are_cookies_enabled() ) {
+        console.log( "setLocalStorage saving information using cookies." );
+        for ( var key in arr ) { createCookie( key, arr[ key ], 1 ); }
+    } else {
+        console.log( "setLocalStorage failed: local storage not supported." );
+    }
+}
+
+function clearLocalStorage( keys ) {
+    if ( localStorage ) {
+    // if ( localStorage && false ) {  // testing only
+        console.log( "clearLocalStorage clearing localStorage." );
+        for ( var i=0; i<keys.length; i++ ) { localStorage.removeItem( keys[i] ); }
+    } else if ( are_cookies_enabled() ) {
+        console.log( "setLocalStorage clearing cookies." );
+        for ( var i=0; i<keys.length; i++ ) { eraseCookie( keys[i] ); }
+    } else {
+        console.log( "clearLocalStorage called, but localStorage not enabled." );
+    }
+}
+

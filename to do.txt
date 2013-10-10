@@ -1,19 +1,13 @@
-Fix table format
-Revise problem layout
-Record within-question orders and numbers
-Re-order questions in data
 
-Make it retrieve condition and subcondition if already assigned? Or something. Currently it will assign subcondition whenever the page is opened, which will means turkers get assigned once on view and again on accept, which is not what we want!
-
-Add alert window when HIT is inactive and/or fix randomization after accept and/or don't display randomized content
+https://workersandbox.mturk.com/mturk/requestqualification?qualificationId=24KSQV66RLPHUV1I351VNI62NMPD5V
+    
+Decide whether to store condition assignment on preview, or on start. I'd tend to say no.
 
 Which params should be randomized and which counterbalanced?
     question order
     answer order
     order within each question, or consistency of orders between questions?
+    number within each question
 
-Add check exclusion
-
-Create qualification template
-Add consent form to qualification
-Add instruction & test to qualification
+Check with Rob about IRB details: session length, payment, print this page phrase
+    

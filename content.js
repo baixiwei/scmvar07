@@ -1,6 +1,7 @@
 function displayTrialContent( target_div, live, on_select, condition, parameters, data ) {
 
-    console.log( "content.js > displayTrial called. live: " + live + ". condition: " + condition + ". parameters: " + dataToString( parameters ) + ". data: " + dataToString( data ) );
+    // console.log( "content.js > displayTrial called. live: " + live + ". condition: " + condition + ". parameters: " + dataToString( parameters ) + ". data: " + dataToString( data ) );
+    console.log( "content.js > displayTrial called. live: " + live );
 
     // generate trial specs and save their data
     var specs = getTrialSpecs( condition, parameters );
@@ -44,54 +45,8 @@ function displayTrialContent( target_div, live, on_select, condition, parameters
         for ( var i=0; i<specs.answers.length; i++ ) {
             $('#button_'+i).attr( 'disabled', 'disabled' );
         }
-    }
-
-    /*
-    // display trial content to target div
-    var createRadioOptions = function( answers, order ) {
-        var content;
-        content = "<form id='radio_options_form'><div id='radio_options'><table><tr>";
-        for ( var i=0; i<answers.length; i++ ) {
-            content += "<td><input type='radio' name='radio_option' id='radio_option_" + order[i] + "' value='" + order[i] + "'><label class='radio_option_label image' for='radio_option_" + order[i] + "'>" + answers[order[i]] + "</label></td>";
-        }
-        content += "</tr></table></div></div>";
-        return content;
-    }
-    var content = specs.text + createRadioOptions( specs.answers, specs.order );
-    target_div.html( content );
-    
-    // hide radio buttons; set answers to check radio buttons, save data, and call on_select when clicked
-    // $('input[name=radio_option]').addClass('input_hidden');
-    $('#radio_options label').addClass('deselected');
-    $('#radio_options label').click( function(){
-        if ( live==true ) {
-            $(this).removeClass('deselected').addClass('selected');
-            $('#radio_options label[for!="'+$(this).attr("for")+'"]').removeClass('selected').addClass('deselected');
-            data.response = $('#radio_options_form input[name=radio_option]:checked').val();
-            console.log( "response logged: " + data.response );
-            on_select();
-        } } );
-    */
-        
+    }        
 }
-/*
-function generateRandomParameters() {
-    var params = {};
-    var numbers;
-    params[ 'subcondition'   ]  = Math.floor( Math.random()*4 );
-    params[ 'question_order' ]  = [ 0, 0, 1, 1 ][ params.subcondition ];
-    params[ 'answer_order'   ]  = [ 0, 1, 0, 1 ][ params.subcondition ];
-    params[ 'q1_order'       ]  = Math.floor( Math.random()*2 );
-    numbers = generateNumbers();
-    params[ 'q1_base_num'    ]  = numbers[0];
-    params[ 'q1_exp_num'     ]  = numbers[1];
-    params[ 'q2_order'       ]  = Math.floor( Math.random()*2 );
-    numbers = generateNumbers();
-    params[ 'q2_base_num'    ]  = numbers[0];
-    params[ 'q2_exp_num'     ]  = numbers[1];
-    return params;
-}
-*/
 
 
 /////////////////////////////////////////////

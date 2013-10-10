@@ -28,6 +28,7 @@ var turk, accepted, sandbox;                        // whether on turk, and if s
 var hitId, assignmentId, workerId, turkSubmitTo;    // other information necessary for turk
 var subjid, trial_data, table, exclude_tables;      // information needed regardless of whether on turk or not
 
+// assign values to all the vars defined above
 function setGlobalVars() {
 
     testing = true;         // change to false when going live
@@ -47,14 +48,22 @@ function setGlobalVars() {
         subjid          = "NONTURK" + Math.floor(Math.random()*1000000000);
     }
 
-    trial_data = turk ?
-        { "turk": turk.toString(), "sandbox": sandbox.toString(), "hitId": hitId, "assignmentId": assignmentId, "workerId": workerId, "subjid": subjid } :
-        { "turk": turk.toString(), "subjid": subjid };
+    trial_data = {
+        "turk": turk.toString(), "subjid": subjid,
+        "localStorage": ( localStorage ? true : false ).toString(),
+        "cookiesEnabled": are_cookies_enabled().toString() };
+    if ( turk ) { $.extend( trial_data, {
+        "turk": turk.toString(), "sandbox": sandbox.toString(),
+        "hitId": hitId, "assignmentId": assignmentId, "workerId": workerId } );
+    }
     console.log( "index.html > setGlobalVars. " + dataToString( trial_data ) );
 
     table   = "scmvar_07";
     if ( turk ) { table += "_turk"; }
     if ( testing ) { table += "_testing"; }
+    exclude_tables = [ "scmvar_02_turk", "scmvar_03", "scmvar_04", "scmvar_04_turk", "scmvar_05", "scmvar_05b", "scmvar_05c" ];
+    // some of the above may not have been run on turk, but I include them all just to be safe
+    // the current experiment, scmvar_07, is NOT excluded because participants are allowed to do multiple HITs
     
     if ( turk ) {
         checkExclusion();
@@ -64,13 +73,32 @@ function setGlobalVars() {
     
 }
 
+// turk only: check whether the worker is excluded due to previous participation in a related experiment
 function checkExclusion() {
-    // TBD
-    assignCondition();
+    if ( offline ) {
+        assignCondition();
+    } else {
+        $.ajax( { type: 'post', cache: false, url: 'exclude_subject.php',
+                  data: { 'subjid': subjid, 'tables': JSON.stringify(exclude_tables), 'table': table },
+                  success: function(data) {
+                    console.log( "index.html > checkExclusion succeeded, result: " + data.toString() );
+                    if ( data==1 ) {
+                        $('#target').html( '<p>Sorry, our records show that you have previously completed a related HIT for this requester.  Therefore, you are not eligible to do this HIT.  We apologize for the inconvenience.</p>' );
+                    } else {
+                        assignCondition();
+                    }
+                  },
+                  error: function(data) {
+                    console.log( "index.html > checkExclusion > error: " + data.toString() );
+                    $('#target').html( '<p>The experiment failed to load for an unknown reason.  Unfortunately, you will be unable to complete this HIT.  We apologize for the inconvenience.</p>' ); 
+                  } 
+                  } );
+    }
 }
 
+// assign condition, which determines which pair of questions will be shown on this trial
 function assignCondition() {
-    var numcond = 2;
+    var numcond = 496;
     var condition;
     if ( turk ) {
         // if you are on turk, condition should be in the url
@@ -99,40 +127,52 @@ function assignCondition() {
     }
 }
 
+// assign parameters, which determine how the questions will be presented
 function assignParameters( condition ) {
-    var parameters;
-    var proceed = function() {
+    var proceed = function( condition, parameters ) {
         console.log( "index.html > assignParameters. " + dataToString( parameters ) );
         trial_data = $.extend( trial_data, { "condition": condition }, parameters );
         doTrial( condition, parameters );
     }
-//    if ( offline ) {
-    if ( true ) {
-        // if offline, generate parameters randomly
-        parameters = generateRandomParameters();
-        proceed();
-    } else {
-        // otherwise, consult database to see whether params were already assigned for this subj & condition
-        // (this should only ever happen in turk)
-        // if so, just use the previously assigned params
-        // if no, then new params will be generated, balancing against previous param assignments in the given condition,
-        // and these assignments will be saved to the database so it should only happen once per subj & condition
-        $.ajax( { type: 'post', cache: false, url: 'assign_parameters.php',
-            data: { 'table': table, 'subjid': subjid, 'condition': condition },
-            success: function( data ) {
-                parameters = JSON.parse( data );
-                console.log( "index.html > assignParameters generated parameters using database: " + parameters );
-                proceed();
-                },
-            error: function( data ) {
-                console.log( "index.html > assignParameters failed: " + data );
-                parameters = generateRandomParameters();
-                console.log( "index.html > assignParameters generated random parameters: " + parameters );
-                proceed();
-            } } );
+    function getParameters( condition, callback ) {
+        var parameters;
+        if ( offline ) {
+            // if we are working offline, parameters are generated randomly
+            console.log( "index.html > getParameters offline, generating parameters randomly." );
+            parameters = generateRandomParameters();
+            callback( condition, parameters );
+        } else if ( checkLocalStorage('condition',condition) ) {
+            // params should only be in localStorage for this participant if we are in turk
+            // the worker has previously previewed the HIT and has now accepted it
+            // in this case, we recover the stored parameters instead of generating new ones, so the accepted HIT will be identical to the previewed one
+            console.log( "index.html > getParameters retrieving parameters from local storage." );
+            parameters = getLocalStorage( [ "subcondition", "question_order", "answer_order", "q1_order", "q1_base_num", "q1_exp_num", "q2_order", "q2_base_num", "q2_exp_num" ] );
+            callback( condition, parameters );
+        } else {
+            // we are either not on turk or on turk and viewing the HIT for the first time
+            // in either case, we consult the database in order to counterbalance parameter assignments within the given condition
+            // we then save the 
+            $.ajax( { type: 'post', cache: false, url: 'assign_parameters.php',
+                data: { 'table': table, 'subjid': subjid, 'condition': condition },
+                success: function( data ) {
+                    console.log( "index.html > assignParameters generated parameters using database." );
+                    parameters = JSON.parse( data );
+                    setLocalStorage( $.extend( { 'condition': condition }, parameters ) );
+                    callback( condition, parameters );
+                    },
+                error: function( data ) {
+                    console.log( "index.html > assignParameters database access failed: " + data.statusText );
+                    console.log( "index.html > assignParameters generated random parameters." );
+                    parameters = generateRandomParameters();
+                    setLocalStorage( $.extend( { 'condition': condition }, parameters ) );
+                    callback( condition, parameters );
+                } } );
+        }
     }
+    getParameters( condition, proceed );
 }
 
+// do the trial and submit data to the database
 function doTrial( condition, parameters ) {
 
     var start_time = new Date();
@@ -198,7 +238,10 @@ function doTrial( condition, parameters ) {
     
 }
 
+// submit data to mechanical turk
 var submitHIT = function() {
+    // remove data from local storage, if applicable, so this participant can do more HITs
+    clearLocalStorage( [ "condition", "subcondition", "question_order", "answer_order", "q1_order", "q1_base_num", "q1_exp_num", "q2_order", "q2_base_num", "q2_exp_num" ] );
     // add data as hidden fields to the form so these will submit to turk
     // NOTE: assignmentId must be included here so Turk will recognize the completed assignment
     for ( key in trial_data ) {
@@ -215,339 +258,6 @@ var submitHIT = function() {
 }
 
 setGlobalVars();
-
-/*
-// global variables
-var offline;        // whether the database will be accessed at all
-var mode;           // forced, free, or auto. free means trials can be left unanswered. auto means all trials are answered automatically.
-var skip;           // which sections of the experiment, if any, should be omitted
-var testing;        // whether data is stored in the main database or a separate testing database
-var turk;           // whether we're on Amazon Mechanical Turk or not
-var table;          // name of the MySQL table where data will be stored
-var exclude_tables; // tables such that subjids listed therein won't be allowed to do the experiment
-var subjid;         // either workerId (for Turk) or a randomly generated number (for IU participant pool)
-var condition;      // condition: a number indicating assigned experimental condition
-
-// global variables only used if the participant is from Mechanical Turk
-var sandbox, assignmentId, workerId, hitId, turkSubmitTo;
-
-function showEntrancePage() {
-    setGlobalVars();
-    console.log( "index.html > setGlobalVars > offline: " + offline + "; mode: " + mode + "; skip: " + skip.toString() + "; testing: " + testing + "; subjid: " + subjid + "; condition: " + condition + "; turk: " + turk );
-    if ( turk ) { console.log( "index.html > setGlobalVars > turk info. sandbox: " + sandbox + "; assignmentId: " + assignmentId + "; workerId: " + workerId + "; hitId: " + hitId + "; turkSubmitTo: " + turkSubmitTo ); }
-    var text = turk ? entrance_turk : entrance_nonturk;
-    $('#target').html( text );
-    console.log( $('#target').css( 'width' ) );
-    if ( assignmentId=="ASSIGNMENT_ID_NOT_AVAILABLE") {
-        // we are on Turk but the HIT has not been assigned yet, disable START button
-        $("#nextPageButton").attr( "disabled", true );
-        $("#nextPageButton").val( "You must ACCEPT the HIT before you can begin." );
-    } else if ( turk ) {
-        // we are on Turk and the HIT has been assigned, enable START button
-        $("#nextPageButton").click( checkExclusion );
-        $("#nextPageButton").val( "Click Here to Start" );
-        $("#nextPageButton").focus();
-    } else {
-        // we're not on Turk, skip straight to the experiment
-        $("#nextPageButton").click( runExperiment );
-        $("#nextPageButton").val( "Click Here to Start" );
-    }
-}
-
-function checkExclusion() {
-    if ( offline ) {
-        runExperiment();
-    } else {
-        $.ajax( {
-            type: 'post',
-            cache: false,
-            url: 'exclude_subject.php',
-            data: { 'subjid': subjid, 'tables': JSON.stringify(exclude_tables), 'table': table },
-            success: function(data) {
-                console.log( "index.html > checkExclusion succeeded, result: " + data.toString() );
-                if ( data==1 ) {
-                    $('#target').html( '<p>Sorry, our records show that you have previously completed a related HIT for this requester.  Therefore, as stated on the first page, you are not eligible to do this HIT.  We apologize for the inconvenience.</p>' );
-                } else {
-                    runExperiment();
-                }
-            },
-            error: function(data) {
-                console.log( "index.html > checkExclusion > error: " + data.toString() );
-                $('#target').html( '<p>The experiment failed to load for an unknown reason.  Unfortunately, you will be unable to complete this HIT.  We apologize for the inconvenience.</p>' ); 
-            }
-        } );
-    }
-}
-
-function showExitPage( final_data ) {
-    if ( true ) {
-        $("#target").html(JSON.stringify(final_data));
-    } else if ( turk ) {
-        $('#target').html( exit_turk );    
-        $("#assignmentId").val( gup("assignmentId") );
-        if ( sandbox ) {
-            $("#exit_form").attr( "action", "http://workersandbox.mturk.com/mturk/externalSubmit" );
-        } else {
-            $("#exit_form").attr( "action", "http://www.mturk.com/mturk/externalSubmit" );
-        }
-    } else {
-        $('#target').html( exit_nonturk );
-    }
-}
-
-showEntrancePage();
-*/
-
-/*
-// detect whether we are on turk and, if so, whether we are in sandbox
-
-// IRB?
-
-// retrieve or generate condition
-
-// retrieve stimuli using condition
-
-// present page
-
-// when submit is clicked, send data to database, then submit to Turk
-
-
-
-// global variables for controlling experiment settings, set below
-var override;   // whether default settings of other globals are overridden for testing purposes
-var turk;       // whether we are on Amazon Mechanical Turk
-var sandbox;    // if we're on Turk, whether we are in the Sandbox
-var offline;    // boolean, determines whether database is used at all
-var testing;    // boolean, determines which database is used and some other aspects of how exp runs
-var mode;       // forced, free, or auto
-var subjid;     // subject's unique identification
-var table;      // name of MySQL table where data will be stored
-var skip;       // indicates which experiment sections are to be included
-
-// setGlobalVars
-function setGlobalVars() {
-    override    = false;
-    turk        = ( gup('assignmentId')!='' );
-    if ( override ) {
-        sandbox = turk ? true : false;
-        offline = false;
-        testing = true;
-        mode    = "free";
-    } else {
-        sandbox = false;
-        offline = false;
-        testing = false;
-        mode    = "forced";
-    }
-    subjid      = turk ? gup('workerId') : ("NONTURK" + Math.floor( Math.random()*1000000000 )) ;
-    table       = testing ? "scmvar_05c_test" : "scmvar_05c";
-    skip        = [];
-    // available to skip: Intro, Pretest, Training, Posttest, Background
-    console.log( "index.html > setGlobalVars > override: " + override + "; turk: " + turk + "; sandbox: " + sandbox + "; offline: " + offline + "; testing: " + testing + "; mode: " + mode + "; subjid: " + subjid + "; table: " + table );
-}
-
-// showEntrancePage
-function showEntrancePage() {
-    setGlobalVars();
-    if ( false ) {
-        $('#target').html( "<p>Select one of the following options:</p>" +
-                           "<p><button type='button' id='button_test'>Take a test</button></p>" +
-                           "<p><button type='button' id='button_training_varied'>Varied training</button></p>" +
-                           "<p><button type='button' id='button_training_nonvaried'>Nonvaried training</button</p>" );
-        $('#button_test').click(
-            function() { skip=["Intro","Training","Posttest","Background"]; assignCondition(); } );
-        $('#button_training_varied').click(
-            function() { skip=["Intro","Pretest","Posttest","Background"]; runExperiment(Math.floor(Math.random()*4)); } );
-        $('#button_training_nonvaried').click(
-            function() { skip=["Intro","Pretest","Posttest","Background"]; runExperiment(4+Math.floor(Math.random()*2));} );
-    } else if ( turk ) {
-        $('#target').html( entrance_turk );
-        if ( gup('assignmentId') == "ASSIGNMENT_ID_NOT_AVAILABLE" ) {
-            // the HIT has not been assigned yet, disable START button
-            $("#nextPageButton").attr( "disabled", true );
-            $("#nextPageButton").val( "You must ACCEPT the HIT before you can begin." );
-        } else {
-            // the HIT has been assigned, enable START button
-            $("#nextPageButton").click( checkExclusion );
-            $("#nextPageButton").val( "Click Here to Start" );
-        }
-    } else {
-        $('#target').html( entrance_nonturk );
-        $("#nextPageButton").click( assignCondition );
-        $("#nextPageButton").val( "Click Here to Start" );
-    }
-}
-
-// checkExclusion (Turk only)
-// check whether this worker has participated in a related study before
-function checkExclusion() {
-    if ( offline ) {
-        showConsentForm();
-    } else {
-        var tables = [ "scmvar_02_turk", "scmvar_03", "scmvar_04", "scmvar_04_turk", "scmvar_05", "scmvar_05b", "scmvar_05c" ];
-        // scmvar_05 is the table for the first pilot run of this experiment on MTurk
-        // scmvar_05b is the table for the second pilot run
-        // scmvar_05b is not excluded in this version because it is the current exp, so MTurk will automatically exclude repeats
-        // I *want* to allow reloads, so they are not excluded
-        $.ajax( { type: 'post', cache: false, url: 'exclude_subject.php',
-                  data: { 'subjid': subjid, 'tables': JSON.stringify(tables), 'table': table },
-                  success: function(data) {
-                    console.log( "index.html > checkExclusion succeeded, result: " + data.toString() );
-                    if ( data==1 ) {
-                        $('#target').html( '<p>Sorry, our records show that you have previously completed a related HIT for this requester.  Therefore, as stated on the first page, you are not eligible to do this HIT.  We apologize for the inconvenience.</p>' );
-                    } else {
-                        showConsentForm();
-                    }
-                  },
-                  error: function(data) {
-                    console.log( "index.html > checkExclusion > error: " + data.toString() );
-                    $('#target').html( '<p>The experiment failed to load for an unknown reason.  Unfortunately, you will be unable to complete this HIT.  We apologize for the inconvenience.</p>' ); 
-                  } 
-                  } );
-    }
-}
-
-// showConsentForm (Turk only)
-// show consent form and proceed only if checkbox is checked
-function showConsentForm() {
-    $('#target').html( consent_form );
-    $('#nextPageButton').click( assignCondition );
-    $('#nextPageButton').val( "Continue" );
-    $('#nextPageButton').attr( 'disabled', true );
-    $('#consentBox').click( function () {
-        var thisCheck = $(this);
-        if (thisCheck.is (':checked') ) {
-            $('#nextPageButton').attr( 'disabled', false );
-        } else {
-            $('#nextPageButton').attr( 'disabled', true );
-        } } );
-}
-
-// assignCondition
-function assignCondition() {
-    var numcond = 8;
-    var condition;
-    var proceed = function() {
-        console.log( "index.html > assignCondition > condition assigned: " + condition );
-        condition = Number(condition);
-        runExperiment( condition );
-    }
-    if ( offline ) {
-        condition = Math.floor( Math.random() * numcond );
-        proceed();
-    } else {
-        $.ajax({ type: 'post', cache: false, url: 'assign_condition.php',
-            data: { 'table': table, 'numcond': numcond, 'subjid': subjid },
-            success: function(data) {
-                console.log( "index.html > assignCondition succeeded: " + data );
-                condition = data;
-                proceed();
-            },
-            error: function(data) {
-                console.log( "index.html > assignCondition failed: " + data );
-                condition = Math.floor( Math.random() * numcond );
-                proceed();
-            }});
-    }
-}
-
-// conditionToFactors
-function conditionToFactors( condition ) {
-    var training    = (condition<4) ? "Varied" : "Nonvaried";
-    var version     = ((condition%2)==0) ? 0 : 1;
-    var testseq     = ([0,1,4,5].indexOf(condition)!=-1) ? 0 : 1;
-    return { "training": training, "version": version, "testseq": testseq };
-}
-
-// makeExpStruct
-function makeExpStruct( training, version, testseq ) {
-    var exp_struct = [];
-    var pretest_version  = testseq;
-    var posttest_version = ((testseq+1)%2);
-    console.log( "index.html > makeExpStruct skipping these sections: " + skip.toString() );
-    if (skip.indexOf("Intro")==-1)      { addIntro( exp_struct ); }
-    if (skip.indexOf("Pretest")==-1)    { addTest( exp_struct, pretest_version, "Pretest", mode ); }
-    if (skip.indexOf("Training")==-1)   { addTraining( exp_struct, training, version, mode ); }
-    if (skip.indexOf("Posttest")==-1)   { addTest( exp_struct, posttest_version, "Posttest", mode ); }
-    if (skip.indexOf("Background")==-1) { addBackground( exp_struct ); }
-    return( exp_struct );
-}
-
-// runExperiment
-function runExperiment( condition ) {
-
-    var factors     = conditionToFactors( condition );
-    var training    = factors["training"];
-    var version     = factors["version"];
-    var testseq     = factors["testseq"];
-    console.log( "index.html > runExperiment > factors assigned. training: " + training + "; version: " + version + "; testseq: " + testseq );
-    
-    var exp_struct  = makeExpStruct( training, version, testseq );
-    
-    // record start time
-    var start_time          = new Date();
-    var start_time_txt      = dateToString( start_time );
-    
-    console.log( "index.html > runExperiment > starting experiment with exp_struct length " + exp_struct.length );
-
-    // run the experiment
-    jsPsych.init($('#target'), {
-        "experiment_structure": exp_struct,
-		"plugins": [
-			{"type": "survey", "src": "utilities/jspsych-survey.js"},
-            {"type": "scmvar", "src": "jspsych-scmvar.js"}
-		],
-        "finish": function( data ) {
-            // record end time
-            var end_time        = new Date();
-            var end_time_txt    = dateToString( end_time );
-            var total_time_min  = (( end_time.getTime() - start_time.getTime() ) / ( 60 * 1000 )).toFixed(2);
-            var test_correct    = 0;
-            var num_ques        = 0;
-            for ( var block=0; block<data.length; block++ ) {
-                for ( var trial=0; trial<data[block].length; trial++ ) {
-                    if ( ['Pretest','Training','Posttest'].indexOf(data[block][trial]['section'])!=-1 ) {
-                        test_correct += Number(data[block][trial].accuracy);
-                        num_ques += 1;
-                    }
-                }
-            }
-            var bonus = Number((0.10 * Math.max( 0, test_correct-Math.floor(num_ques/2) )).toFixed(2));
-            var subj_data       = { "subjid": subjid,
-                                    "turk": turk.toString(), "sandbox": sandbox.toString(),
-                                    "testing": testing.toString(), "mode": mode,
-                                    "condition": condition, "training": training, "version": version, "testseq": testseq,
-                                    "start": start_time_txt, "end": end_time_txt, "time": Number(total_time_min),
-                                    "test_correct": test_correct, "bonus": bonus };
-            var final_data      = prependData( subj_data, data );
-            console.log( "index.html > runExperiment jsPsych run complete. final data follows." );
-            console.log( final_data );
-            if ( offline ) {
-                console.log( "index.html > runExperiment in offline mode, skipping data submission." );
-                showExitPage( final_data );
-            } else {
-                $.ajax( { type: 'post',
-                          cache: false,
-                          url: 'submit_data.php',
-                          data: { 
-                            'table': table,
-                            'json': JSON.stringify(final_data) },
-                          success: function(data) {
-                            console.log( "index.html > runExperiment: submit_data succeeded." );
-                            showExitPage( final_data );
-                          },
-                          error: function(data) {
-                            console.log( "index.html > runExperiment: submit_data failed with error " + data.statusText );
-                            showExitPage( final_data );
-                          }
-                        } );
-            }
-        } } ) ;
-}
-
-showEntrancePage();
-
-*/
 
 </script>
 </html>
