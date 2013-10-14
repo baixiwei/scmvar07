@@ -1,30 +1,25 @@
-function displayTrialContent( target_div, live, on_select, condition, parameters, data ) {
+//////////////////////////////////////////////////////////////////////////////////////////
+// displayButtonChoice and getTrialSpecs
+// displayButtonChoice displays trial content and sets it to respond to user input
+// getTrialSpecs generates the content for displayButtonChoice
+//////////////////////////////////////////////////////////////////////////////////////////
 
-    // console.log( "content.js > displayTrial called. live: " + live + ". condition: " + condition + ". parameters: " + dataToString( parameters ) + ". data: " + dataToString( data ) );
+// displayButtonChoice
+// in target_div, displays a block of text contained in specs.text
+// followed by vertically laid-out answer buttons with content contained in specs.answers
+// when a button is pressed, if live is true, saves specs.data, response, and accuracy to data, then calls on_select
+function displayButtonChoice( target_div, live, on_select, specs, data ) {
+
     console.log( "content.js > displayTrial called. live: " + live );
 
-    // generate trial specs and save their data
-    var specs = getTrialSpecs( condition, parameters );
-    
-    // save trial data to main data
-    data = $.extend( data, specs.data );
-    
     // display trial content to target div
-    var content = "";
-    // questions
-    content += "<table class='question_table'><tr>";
-    content += "<td><p><strong>Problem A:</strong></p>" + specs.questions[0].text + "</td>"
-    content += "<td><p><strong>Problem B:</strong></p>" + specs.questions[1].text + "</td>";
-    content += "</tr></table>";
-    // answers
-    content += "<p>Click on the button which best describes the way the elements of the two problems correspond to each other.</p>";
+    var content = specs.text;
     for ( var i=0; i<specs.answers.length; i++ ) {
-        content += "<p><button id='button_" + i + "' type='button' class='answer_button'>" + specs.answers[i] + "</button></p>";
+        content += "<p><button id='button_" + i + "' type='button' class='trial_answer_button'>" + specs.answers[i] + "</button></p>";
     }
-    
     target_div.html( content );
 
-    // set button to react appropriately when clicked
+    // set answer buttons to react appropriately when clicked
     if ( live ) {
         for ( var i=0; i<specs.answers.length; i++ ) {
             $('#button_'+i).click( function() {
@@ -36,7 +31,7 @@ function displayTrialContent( target_div, live, on_select, condition, parameters
                 // record response and accuracy
                 data.response = Number( $(this).attr('id').slice(7) );
                 data.accuracy = Number( data.response==data.key );
-                console.log( "response logged: " + data.response );
+                console.log( "displayButtonChoice > response logged: " + data.response );
                 // call on_select (this can e.g. activate an external submit button)
                 on_select();
                 } );
@@ -49,99 +44,89 @@ function displayTrialContent( target_div, live, on_select, condition, parameters
 }
 
 
-/////////////////////////////////////////////
-// random parameter generation for trials
-/////////////////////////////////////////////
-
-function generateRandomParameters() {
-    var params = {};
-    var numbers;
-    params[ 'subcondition'   ]  = Math.floor( Math.random()*4 );
-    params[ 'question_order' ]  = [ 0, 0, 1, 1 ][ params.subcondition ];
-    params[ 'answer_order'   ]  = [ 0, 1, 0, 1 ][ params.subcondition ];
-    params[ 'q1_order'       ]  = Math.floor( Math.random()*2 );
-    numbers = generateNumbers();
-    params[ 'q1_base_num'    ]  = numbers[0];
-    params[ 'q1_exp_num'     ]  = numbers[1];
-    params[ 'q2_order'       ]  = Math.floor( Math.random()*2 );
-    numbers = generateNumbers();
-    params[ 'q2_base_num'    ]  = numbers[0];
-    params[ 'q2_exp_num'     ]  = numbers[1];
-    return params;
-}
-
-// generateNumbers
-//      returns a pair of numbers in [3,9] both of which are different
-//      from both of those returned the last time it was called
-var prev_numbers = [ 0, 0 ];
-function generateNumbers() {
-    // randIntExclude: return an integer in [m,n] but not in l
-    function randIntExclude(m,n,l) {
-        var result = m + Math.floor( Math.random() * (n-m+1) )
-        var okay = true;
-        for ( var i=0; i<l.length; i++ ) {
-            if ( result == l[i] ) {
-                okay = false;
-            }
-        }
-        if ( okay ) {
-            return result;
-        } else {
-            return randIntExclude(m,n,l);
-        }
-    }
-
-    var new_numbers = [ 0, 0 ];
-    new_numbers[0]  = randIntExclude( 3, 9, prev_numbers );
-    new_numbers[1]  = randIntExclude( 3, 9, prev_numbers.concat( [ new_numbers[0] ] ) );
-    prev_numbers    = new_numbers;
-    return prev_numbers;
-}
-
-
-/////////////////////////////////////////////
-// generation of trial specifications
-/////////////////////////////////////////////
-
+// getTrialSpecs
+// creates content for displayButtonChoice, including the following:
+// text: a block of text which contains the text from two question objects in parallel columns,
+//  followed by a prompt to indicate how the terms (nouns) in one question correspond to those in the other
+// answers: two descriptions of the two possible ways in which the elements in one question object could correspond to those in the other
+// data: information about the question objects, together with an answer key
 function getTrialSpecs( condition, parameters ) {
 
-    // retrieve a pair of questions based on condition
+    //// use condition to determine which question objects will serve as the basis for the trial
+    
     var question_list   = getQuestionList();
     var question_idxs   = getPairIdxs( question_list.length )[ condition ];
     var question_pair   = [ question_list[question_idxs[0]], question_list[question_idxs[1]] ];
     
-    // instantiate the questions based on the relevant parameters
-    question_pair[0].instantiate( parameters.q1_order, parameters.q1_base_num, parameters.q1_exp_num );
-    question_pair[1].instantiate( parameters.q2_order, parameters.q2_base_num, parameters.q2_exp_num );
+    //// First create the text block which will appear in the trial
     
-    // order the questions based on parameters.question_order
-    var questions       = [ 
-        [ question_pair[0], question_pair[1] ],
-        [ question_pair[1], question_pair[0] ]
-        ][ parameters.question_order ];
+    // use parameters for term order and base_num / exp_num to instantiate the question objects
+    // (i.e. fill in their text templates with actual text, see instantiate below)
+    question_pair[0].instantiate( parameters.q1_term_order, parameters.q1_base_num, parameters.q1_exp_num );
+    question_pair[1].instantiate( parameters.q2_term_order, parameters.q2_base_num, parameters.q2_exp_num );
+    
+    // use parameters.question_order to select which questions will be displayed first and second
+    if ( parameters.question_order==0 ) {
+        var questions = [ question_pair[0], question_pair[1] ];
+    } else if ( parameters.question_order==1 ) {
+        var questions = [ question_pair[1], question_pair[0] ];
+    }
+
+    // put the questions into a 2-column table and add a question prompt at the end
+    var text = "<table class='trial_text_table'><tr>"
+        + "<td><p><strong>Problem A:</strong></p>" + questions[0].text + "</td>"
+        + "<td><p><strong>Problem B:</strong></p>" + questions[1].text + "</td>"
+        + "</tr></table>"
+        + "<p>Click on the button which best describes the way the elements of the two problems correspond to each other.</p>";
         
-    // create the answers based on the ordered questions
-    var answer_pair     = [
-        createAnswer( questions[0].base_noun, questions[1].base_noun, questions[0].exp_noun, questions[1].exp_noun ),
-        createAnswer( questions[0].base_noun, questions[1].exp_noun, questions[0].exp_noun, questions[1].base_noun )
-        ];
-        
-    // create ordered array of answers based on params
-    var answers         = [
-        [ answer_pair[0], answer_pair[1] ],
-        [ answer_pair[1], answer_pair[0] ]
-        ][ parameters.answer_order ];
-        
-    // create data object containing info about questions using their original order, and an answer key
-    var data = $.extend( {
+    //// Next create the answers that will appear on the buttons underneath the above text block
+    
+    // an "answer" is an html string describing one way of mapping correspondences between terms in questions
+    var createAnswer = function( q1_n1, q2_n1, q1_n2, q2_n2 ) {
+        var result = "<table class='matching_response'>";
+        result += "<tr><td>" + q1_n1 + "<td>correspond to</td><td>" + q2_n1 + "</td></tr>";
+        result += "<tr><td>" + q1_n2 + "<td>correspond to</td><td>" + q2_n2 + "</td></tr>";
+        result  += "</table>";
+        return result;
+    }
+    
+    // the terms on the left side of the answers come from whichever question was displayed on the left in "text" above
+    // and they appear in the same order as was used to instantiate the question above
+    // the terms on the right side of the answers come from the other of the two questions,
+    // with one answer (the correct one) displaying them in the order corresponding to that used for the first question,
+    // and the other answer (incorrect) displaying the terms in the opposite order
+    if ( parameters.question_order==0 ) {
+        var left_order = parameters.q1_term_order;
+    } else if ( parameters.question_order==1 ) {
+        var left_order = parameters.q2_term_order;
+    }
+    
+    // create two answers, one correct and one incorrect
+    if ( left_order==0 ) {
+        var ans_correct     = createAnswer( questions[0].base_noun, questions[1].base_noun, questions[0].exp_noun, questions[1].exp_noun );
+        var ans_incorrect   = createAnswer( questions[0].base_noun, questions[1].exp_noun, questions[0].exp_noun, questions[1].base_noun );
+    } else if ( left_order==1 ) {
+        var ans_correct     = createAnswer( questions[0].exp_noun, questions[1].exp_noun, questions[0].base_noun, questions[1].base_noun );
+        var ans_incorrect   = createAnswer( questions[0].exp_noun, questions[1].base_noun, questions[0].base_noun, questions[1].exp_noun );
+    }
+    
+    // use parameters.answer_order to put the answers in order
+    if ( parameters.answer_order==0 ) {
+        var answers = [ ans_correct, ans_incorrect ];
+    } else if ( parameters.answer_order==1 ) {
+        var answers = [ ans_incorrect, ans_correct ];
+    }
+    
+    //// finally create a data object for the trial and return
+    var data = {
         "q1_quesID": question_pair[0].quesID, "q1_schema": question_pair[0].schema,
         "q1_base_noun": question_pair[0].base_noun, "q1_exp_noun": question_pair[0].exp_noun,
         "q2_quesID": question_pair[1].quesID, "q2_schema": question_pair[1].schema,
-        "q2_base_noun": question_pair[1].base_noun, "q2_exp_noun": question_pair[1].exp_noun
-        }, { "key": parameters.answer_order } );
-        
-    // return the specifications
-    return { "questions": questions, "answers": answers, "data": data };
+        "q2_base_noun": question_pair[1].base_noun, "q2_exp_noun": question_pair[1].exp_noun,
+        "key": parameters.answer_order
+        };
+
+    return { "text": text, "answers": answers, "data": data };
         
 }
 
@@ -156,19 +141,13 @@ var getPairIdxs = function( n ) {
     return result;
 }
 
-var createAnswer = function( a, b, c, d ) {
-    var result = "<table class='matching-response'>";
-    result += "<tr><td>" + a + "<td>correspond to</td><td>" + b + "</td></tr>";
-    result += "<tr><td>" + c + "<td>correspond to</td><td>" + d + "</td></tr>";
-    result  += "</table>";
-    return result;
-}
 
-
-/////////////////////////////////////////////
-// Question Class
-// Based on Exp 6
-/////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////
+// Question class and getQuestionList
+// The question class is used for the question objects employed by getTrialSpecs
+// getQuestionList returns an array of actual question objects, which constitute the stimuli for this exp
+// This stuff is mostly based on Exp 6, but with some unneeded functionality removed
+//////////////////////////////////////////////////////////////////////////////////////////
 
 // Question
 //  a Question object contains information about one stimulus for test or training
@@ -193,12 +172,9 @@ var instantiateQuestion = function( order, base_num, exp_num ) {
     return this;
 }
 
-/////////////////////////////////////////////
-// Question Lists
-// Based on Exp 6 with revision
-// quesIDs are consistent with Exp 6
-/////////////////////////////////////////////
 
+// getQuestionList returns an array of all the stimuli for this experiment
+// They are based on exp 6 with minor revision; quesIDs are consistent with exp 6 where possible
 function getQuestionList() {
 
     var questions = [

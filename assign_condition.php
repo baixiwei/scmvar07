@@ -73,7 +73,7 @@ for ( $i=0; $i<$numcond; $i++ ) {
 }
 
 // record condition assignment to database
-// EDIT: this is commented out because it is done in assign_subcondition.php instead
+// EDIT: this is commented out because I decided to only balance completions, not assignments
 // Note that this is a project-specific revision!
 // $subjid = $_POST['subjid'];
 // $query  = 'INSERT INTO '.mysql_real_escape_string($table).' (subjid,`condition`) VALUES ("'.mysql_real_escape_string($subjid).'", '.mysql_real_escape_string($final_condition).')';

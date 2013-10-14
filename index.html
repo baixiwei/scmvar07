@@ -44,7 +44,7 @@ function setGlobalVars() {
         turkSubmitTo    = gup( "turkSubmitTo" );
         subjid          = workerId;
     } else {
-        offline         = true;        // change to false when going live
+        offline         = false;        // change to false when going live
         subjid          = "NONTURK" + Math.floor(Math.random()*1000000000);
     }
 
@@ -127,49 +127,126 @@ function assignCondition() {
     }
 }
 
+/*
+// generateRandomParameters is used if offline or if assign_parameters.php fails
+// it should function similarly to assign_parameters.php and should produce the same format output
+function generateRandomParameters() {
+    var params = {};
+    var numbers;
+    params[ 'subcondition'   ]  = Math.floor( Math.random()*8 );
+    params[ 'subcondition'   ]  = 7;
+    params[ 'question_order' ]  = [ 0, 0, 0, 0, 1, 1, 1, 1 ][ params.subcondition ];
+    params[ 'answer_order'   ]  = [ 0, 0, 1, 1, 0, 0, 1, 1 ][ params.subcondition ];
+    params[ 'term_consistency' ] = [ 0, 1, 0, 1, 0, 1, 0, 1 ][ params.subcondition ];
+    params[ 'q1_term_order'  ]  = Math.floor( Math.random()*2 );
+    params[ 'q2_term_order'  ]  = ( 1 + params[ 'term_consistency' ] + params[ 'q1_term_order'  ] ) % 2;
+    numbers = generateNumbers();
+    params[ 'q1_base_num'    ]  = numbers[0];
+    params[ 'q1_exp_num'     ]  = numbers[1];
+    numbers = generateNumbers();
+    params[ 'q2_base_num'    ]  = numbers[0];
+    params[ 'q2_exp_num'     ]  = numbers[1];
+    return params;
+}
+*/
+
+// generateNumbers: helper function used in assignParameters below
+//  returns a pair of numbers in [3,9] both of which are different from each other & those returned the last time it was called
+var prev_numbers = [ 0, 0 ];
+function generateNumbers() {
+    // randIntExclude: return an integer in [m,n] but not in l
+    function randIntExclude(m,n,l) {
+        var result = m + Math.floor( Math.random() * (n-m+1) )
+        var okay = true;
+        for ( var i=0; i<l.length; i++ ) {
+            if ( result == l[i] ) {
+                okay = false;
+            }
+        }
+        if ( okay ) {
+            return result;
+        } else {
+            return randIntExclude(m,n,l);
+        }
+    }
+
+    var new_numbers = [ 0, 0 ];
+    new_numbers[0]  = randIntExclude( 3, 9, prev_numbers );
+    new_numbers[1]  = randIntExclude( 3, 9, prev_numbers.concat( [ new_numbers[0] ] ) );
+    prev_numbers    = new_numbers;
+    return prev_numbers;
+}
+
 // assign parameters, which determine how the questions will be presented
 function assignParameters( condition ) {
-    var proceed = function( condition, parameters ) {
-        console.log( "index.html > assignParameters. " + dataToString( parameters ) );
-        trial_data = $.extend( trial_data, { "condition": condition }, parameters );
-        doTrial( condition, parameters );
-    }
-    function getParameters( condition, callback ) {
-        var parameters;
+    // if parameters have already been assigned, just retrieve them and start the trial
+    // this should only happen if we are on turk and the worker has previewed the HIT
+    // retrieving the stored parameters guarantees that the accepted HIT will be identical to the previewed one
+    if ( checkLocalStorage('condition',condition) ) {
+        // params should only be in localStorage (or cookie) for this participant 
+        // if we are in turk and the worker has previously previewed the HIT and has now accepted it
+        // in this case, we recover the stored parameters instead of generating new ones, so the accepted HIT will be identical to the previewed one
+        console.log( "index.html > assignParameters retrieving subcondition & parameters from local storage." );
+        var params = getLocalStorage( [
+            "subcondition", "question_order", "answer_order", "term_consistency",
+            "q1_term_order", "q1_base_num", "q1_exp_num", "q2_term_order", "q2_base_num", "q2_exp_num" ] );
+        console.log( "index.html > assignParameters. " + dataToString( params ) );
+        $.extend( trial_data, { "condition": condition }, params );
+        doTrial( condition, params );
+    } else {
+        // otherwise we will need to generate a subcondition
+        // once this has been done, proceed is called
+        // this function determines values of all other parameters either based on subcondition or randomly,
+        // records them, and then starts the trial
+        var proceed = function( condition, subcondition ) {
+            var params = {};
+            // if no subcondition is given, choose one randomly
+            subcondition = (subcondition==undefined) ? Math.floor( Math.random()*8 ) : subcondition;
+            params[ 'subcondition'   ]  = subcondition;
+            // use subcondition to determine values for counterbalanced params
+            params[ 'question_order' ]  = [ 0, 0, 0, 0, 1, 1, 1, 1 ][ params.subcondition ];
+            params[ 'answer_order'   ]  = [ 0, 0, 1, 1, 0, 0, 1, 1 ][ params.subcondition ];
+            params[ 'term_consistency' ] = [ 0, 1, 0, 1, 0, 1, 0, 1 ][ params.subcondition ];
+            // randomly select values for randomized params
+            params[ 'q1_term_order'  ]  = Math.floor( Math.random()*2 );
+            params[ 'q2_term_order'  ]  = ( 1 + params[ 'term_consistency' ] + params[ 'q1_term_order'  ] ) % 2;
+            var numbers;
+            numbers = generateNumbers();
+            params[ 'q1_base_num'    ]  = numbers[0];
+            params[ 'q1_exp_num'     ]  = numbers[1];
+            numbers = generateNumbers();
+            params[ 'q2_base_num'    ]  = numbers[0];
+            params[ 'q2_exp_num'     ]  = numbers[1];
+            // report and record assigned parameters, and save to local storage if possible
+            console.log( "index.html > assignParameters. " + dataToString( params ) );
+            $.extend( trial_data, { "condition": condition }, params );
+            setLocalStorage( $.extend( { 'condition': condition }, params ) );
+            // start the trial
+            doTrial( condition, params );
+        }
+        // determine subcondition by consulting local data if possible, or database otherwise,
+        // then call proceed on the result
         if ( offline ) {
             // if we are working offline, parameters are generated randomly
-            console.log( "index.html > getParameters offline, generating parameters randomly." );
-            parameters = generateRandomParameters();
-            callback( condition, parameters );
-        } else if ( checkLocalStorage('condition',condition) ) {
-            // params should only be in localStorage for this participant if we are in turk
-            // the worker has previously previewed the HIT and has now accepted it
-            // in this case, we recover the stored parameters instead of generating new ones, so the accepted HIT will be identical to the previewed one
-            console.log( "index.html > getParameters retrieving parameters from local storage." );
-            parameters = getLocalStorage( [ "subcondition", "question_order", "answer_order", "q1_order", "q1_base_num", "q1_exp_num", "q2_order", "q2_base_num", "q2_exp_num" ] );
-            callback( condition, parameters );
-        } else {
+            console.log( "index.html > assignParameters offline, generating subcondition & parameters randomly." );
+            proceed( condition );
+        } else  {
             // we are either not on turk or on turk and viewing the HIT for the first time
-            // in either case, we consult the database in order to counterbalance parameter assignments within the given condition
-            // we then save the 
-            $.ajax( { type: 'post', cache: false, url: 'assign_parameters.php',
-                data: { 'table': table, 'subjid': subjid, 'condition': condition },
+            // in either case, we consult the database in order to counterbalance subcondition assignment within our condition
+            $.ajax( { type: 'post', cache: false, url: 'assign_subcondition.php',
+                data: { 'table': table, 'subjid': subjid, 'condition': condition, 'numsubcond': 8 },
                 success: function( data ) {
-                    console.log( "index.html > assignParameters generated parameters using database." );
-                    parameters = JSON.parse( data );
-                    setLocalStorage( $.extend( { 'condition': condition }, parameters ) );
-                    callback( condition, parameters );
+                    console.log( "index.html > assignParameters generated subcondition using database, generating parameters." );
+                    var subcondition = JSON.parse( data );
+                    proceed( condition, subcondition );
                     },
                 error: function( data ) {
                     console.log( "index.html > assignParameters database access failed: " + data.statusText );
-                    console.log( "index.html > assignParameters generated random parameters." );
-                    parameters = generateRandomParameters();
-                    setLocalStorage( $.extend( { 'condition': condition }, parameters ) );
-                    callback( condition, parameters );
+                    console.log( "index.html > assignParameters generating subcondition & parameters randomly." );
+                    proceed( condition );
                 } } );
         }
     }
-    getParameters( condition, proceed );
 }
 
 // do the trial and submit data to the database
@@ -182,40 +259,46 @@ function doTrial( condition, parameters ) {
         var content = '';
         content     += '<div id="trial"></div>';
         content     += '<form id="my_form" method="POST">';
-        content     += '<p><input id="mTurkSubmitButton" type="submit" name="Submit" value=""></p>';
+        content     += '<p><input id="submitButton" type="submit" name="Submit" value="Submit"></p>';
         content     += '</form>';
         $('#target').html( content );
         // set the submit button to appropriate text and action
-        var submit_txt, live;
         if ( turk ) {
-            submit_txt = accepted ?  "Submit HIT" : "You must click ACCEPT before you can do this HIT.";
-            live = accepted;
+            $('#submitButton').val( accepted ? "Submit HIT" : "You must click ACCEPT before you can do this HIT." );
+        }
+        $('#submitButton').click( submitData );
+        $('#submitButton').attr( "disabled", "disabled" );
+        // create vars for input to displayButtonChoice
+        if ( turk ) {
+            var live  = accepted;
         } else {
-            submit_txt = "Submit";
-            live = true;
-        }   
-        $('#mTurkSubmitButton').val( submit_txt );
-        $('#mTurkSubmitButton').click( submitData );
-        $('#mTurkSubmitButton').attr( "disabled", "disabled" );
-        var on_select = function() { $('#mTurkSubmitButton').removeAttr( "disabled" ); }
-        // display the trial
-        displayTrialContent( $('#trial'), live, on_select, condition, parameters, trial_data );
+            var live = true;
+        }
+        var on_select = function() { $('#submitButton').removeAttr( "disabled" ); }
+        var specs = getTrialSpecs( condition, parameters );
+        $.extend( trial_data, specs.data );
+        // display trial content to trial div and wait for user to click a button
+        displayButtonChoice( $('#trial'), live, on_select, specs, trial_data );
     }
     
     var submitData = function(e) {
         // prevent from submitting the form by default
         e.preventDefault();
+        // remove stored params from local storage
+        clearLocalStorage( [ "condition", "subcondition", "question_order", "answer_order", "term_consistency", "q1_term_order", "q1_base_num", "q1_exp_num", "q2_term_order", "q2_base_num", "q2_exp_num" ] );
         // add start and end times and rt to data
         var end_time            = new Date();
         trial_data.start_time   = start_time.toString();
         trial_data.end_time     = end_time.toString();
         trial_data.rt           = end_time.getTime() - start_time.getTime();
-        if ( offline || (!turk) ) {
-            // if offline, or not on turk, just display the data
+        if ( offline ) {
+            // if offline, just display the data
             // if you ever run this outside of turk for real, you'll want something different to happen here.
             $('#target').html( JSON.stringify(trial_data) );
         } else {
-            // submit data to our database, then to turk
+            // submit data to our database, then submit to turk or display data
+            // if you ever run this outside of turk for real, you'll want something different to happen here.
+            var next = turk ? submitHIT : function() {$('#target').html( JSON.stringify(trial_data) );};
             $.ajax( { type: 'post',
                       cache: false,
                       url: 'submit_data_row.php',
@@ -224,11 +307,11 @@ function doTrial( condition, parameters ) {
                         'json': JSON.stringify(trial_data) },
                       success: function(d) {
                         console.log( "submitData succeeded with result: " + d );
-                        submitHIT();
+                        next();
                       },
                       error: function(d) {
                         console.log( "submitData failed with error " + d.statusText );
-                        submitHIT();
+                        next();
                       }
                     } );
         }
@@ -239,9 +322,7 @@ function doTrial( condition, parameters ) {
 }
 
 // submit data to mechanical turk
-var submitHIT = function() {
-    // remove data from local storage, if applicable, so this participant can do more HITs
-    clearLocalStorage( [ "condition", "subcondition", "question_order", "answer_order", "q1_order", "q1_base_num", "q1_exp_num", "q2_order", "q2_base_num", "q2_exp_num" ] );
+function submitHIT() {
     // add data as hidden fields to the form so these will submit to turk
     // NOTE: assignmentId must be included here so Turk will recognize the completed assignment
     for ( key in trial_data ) {

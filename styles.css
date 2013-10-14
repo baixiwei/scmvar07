@@ -44,13 +44,14 @@ Everything below target is contained inside target and so should be <= in size. 
 
 /* styles for displaying questions during trials */
 
-table.question_table {
+table.trial_text_table {
     table-layout: fixed;
     border-collapse: separate;
     border-spacing: 3px 0px;
+    font-size: 14px;
 }
 
-table.question_table td {
+table.trial_text_table td {
     width: 50%;
     vertical-align: top;
     border-style: solid;
@@ -61,7 +62,7 @@ table.question_table td {
 
 /* styles for response buttons */
 
-button.answer_button {
+button.trial_answer_button {
     width: 750px;
     text-align: center;
     background: LightGrey;
@@ -75,20 +76,22 @@ button.selected {
 
 /* styles for content inside response buttons */
 
-table.matching-response {
+table.matching_response {
     table-layout: fixed;
     width: 720px;
     margin: 5px;
     border-style: solid;
     border-width: 1px;
     background-color: white;
+    font-family: "Times New Roman", Times, serif;
+    font-size: 14px; 
 }
 
-table.matching-response tr{
+table.matching_response tr{
     border-style: solid;
     border-width: 1px;
 }
 
-table.matching-response td{
+table.matching_response td{
     padding: 5px;
 }
