@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>SCMVAR Experiment 7</title>
+
+    <script type="text/javascript"          src="jquery-1.8.3.min.js"></script>
+    <script type="text/javascript"          src="utility.js"></script>
+    <script type="text/javascript"          src="content.js"></script>
+    <link type="text/css" rel="stylesheet"  href="styles.css">
+
+</head>
+
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<!-- disable the following when out of development: -->
+<META HTTP-EQUIV="Pragma" CONTENT="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="-1">
+
+<body>
+	<div id="target"></div>
+</body>
+
+<script type="text/javascript">
+
+// generateNumbers: helper function used in assignParameters below
+//  returns a pair of numbers in [3,9] both of which are different from each other & those returned the last time it was called
+var prev_numbers = [ 0, 0 ];
+function generateNumbers() {
+    // randIntExclude: return an integer in [m,n] but not in l
+    function randIntExclude(m,n,l) {
+        var result = m + Math.floor( Math.random() * (n-m+1) )
+        var okay = true;
+        for ( var i=0; i<l.length; i++ ) {
+            if ( result == l[i] ) {
+                okay = false;
+            }
+        }
+        if ( okay ) {
+            return result;
+        } else {
+            return randIntExclude(m,n,l);
+        }
+    }
+
+    var new_numbers = [ 0, 0 ];
+    new_numbers[0]  = randIntExclude( 3, 9, prev_numbers );
+    new_numbers[1]  = randIntExclude( 3, 9, prev_numbers.concat( [ new_numbers[0] ] ) );
+    prev_numbers    = new_numbers;
+    return prev_numbers;
+}
+
+var str = "<table class='output_table'>";
+L = getQuestionList();
+var q, numbers;
+for ( var i=0; i<L.length; i++ ) {
+    q = L[i];
+    numbers = generateNumbers();
+    q.instantiate( Math.floor(Math.random()*2), numbers[0], numbers[1] );
+    str += "<tr><td><p>" + q.schema + "</p><p>" + q.quesID + "</p></td><td>" + q.text + "</td></tr>";
+}
+str += "</table>";
+
+$('#target').html( str );
+
+</script>
+</html>

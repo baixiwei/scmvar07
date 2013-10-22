@@ -60,6 +60,21 @@ table.trial_text_table td {
     padding: 0px 10px 0px 10px;
 }
 
+/* styles for displaying questions in output.html */
+
+table.output_table {
+    table-layout: fixed;
+    border-collapse: separate;
+    font-size: 14px;
+}
+
+table.output_table td {
+    vertical-align: top;
+    border-style: solid;
+    border-width: 1px;
+    padding: 10px;
+}
+
 /* styles for response buttons */
 
 button.trial_answer_button {

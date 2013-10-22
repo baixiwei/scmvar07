@@ -1,8 +1,0 @@
-"id","turk","sandbox","subjid","workerId","hitId","assignmentId","condition","subcondition","question_order","answer_order","question1_quesID","question1_schema","question1_base_noun","question1_exp_noun","question1_base_num","question1_exp_num","question2_quesID","question2_schema","question2_base_noun","question2_exp_noun","question2_base_num","question2_exp_num","key","response","accuracy","rt"
-"1","","","flibbertigibbet","","","","0","1","","","","","","","","","","","","","","","","","",""
-"2","","","flibbertigibbet","","","","0","0","","","","","","","","","","","","","","","","","",""
-"3","","","flibbertigibbet","","","","0","2","","","","","","","","","","","","","","","","","",""
-"4","","","flibbertigibbet","","","","0","3","","","","","","","","","","","","","","","","","",""
-"5","","","flibbertigibbet","","","","0","3","","","","","","","","","","","","","","","","","",""
-"6","","","flibbertigibbet","","","","0","1","","","","","","","","","","","","","","","","","",""
-"7","true","true","flibbertigibbet","flibbertigibbet","139755","184770","0","1","0","1","1","PCO","meals","friends","","","2","PCO","pizza brands","consumers","","","0","1","0","316569"

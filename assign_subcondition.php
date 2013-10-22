@@ -11,7 +11,7 @@ $condition      = $_POST['condition'];
 $numsubcond     = $_POST['numsubcond'];
 
 // create array to hold # complete per subcondition
-$current_numbers = array_fill( 0, $numsubcond-1, 0 );
+$current_numbers = array_fill( 0, $numsubcond, 0 );
 
 // query database to get actual number complete per subcondition within given condition
 $query      = 'SELECT `subcondition`, COUNT(DISTINCT subjid) FROM '.mysql_real_escape_string($table).' WHERE `condition`='.$condition.' GROUP BY `subcondition`';

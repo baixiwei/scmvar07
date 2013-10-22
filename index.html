@@ -27,11 +27,16 @@ var testing, offline;                               // controls whether/which da
 var turk, accepted, sandbox;                        // whether on turk, and if so, whether HIT accepted, whether in sandbox
 var hitId, assignmentId, workerId, turkSubmitTo;    // other information necessary for turk
 var subjid, trial_data, table, exclude_tables;      // information needed regardless of whether on turk or not
+var verbose;                                        // whether information is sent to console
+
+// for f'ing IE: set console calls to not return an error if console not available
+if ( !window.console ) { console={}; console.log=function(){}; }
 
 // assign values to all the vars defined above
 function setGlobalVars() {
 
-    testing = true;         // change to false when going live
+    testing = false;         // change to false when going live
+    verbose = testing;
 
     turk = ( gup( "assignmentId" ) != "" );
     if ( turk ) {
@@ -56,7 +61,7 @@ function setGlobalVars() {
         "turk": turk.toString(), "sandbox": sandbox.toString(),
         "hitId": hitId, "assignmentId": assignmentId, "workerId": workerId } );
     }
-    console.log( "index.html > setGlobalVars. " + dataToString( trial_data ) );
+    if ( verbose ) { console.log( "index.html > setGlobalVars. " + dataToString( trial_data ) ); }
 
     table   = "scmvar_07";
     if ( turk ) { table += "_turk"; }
@@ -81,7 +86,7 @@ function checkExclusion() {
         $.ajax( { type: 'post', cache: false, url: 'exclude_subject.php',
                   data: { 'subjid': subjid, 'tables': JSON.stringify(exclude_tables), 'table': table },
                   success: function(data) {
-                    console.log( "index.html > checkExclusion succeeded, result: " + data.toString() );
+                    if ( verbose ) { console.log( "index.html > checkExclusion succeeded, result: " + data.toString() ); }
                     if ( data==1 ) {
                         $('#target').html( '<p>Sorry, our records show that you have previously completed a related HIT for this requester.  Therefore, you are not eligible to do this HIT.  We apologize for the inconvenience.</p>' );
                     } else {
@@ -89,7 +94,7 @@ function checkExclusion() {
                     }
                   },
                   error: function(data) {
-                    console.log( "index.html > checkExclusion > error: " + data.toString() );
+                    if ( verbose ) { console.log( "index.html > checkExclusion > error: " + data.toString() ); }
                     $('#target').html( '<p>The experiment failed to load for an unknown reason.  Unfortunately, you will be unable to complete this HIT.  We apologize for the inconvenience.</p>' ); 
                   } 
                   } );
@@ -98,17 +103,17 @@ function checkExclusion() {
 
 // assign condition, which determines which pair of questions will be shown on this trial
 function assignCondition() {
-    var numcond = 496;
+    var numcond = 2556;
     var condition;
     if ( turk ) {
         // if you are on turk, condition should be in the url
         condition = gup( "condition" );
-        console.log( "index.html > assignCondition condition received from turk url: " + condition );
+        if ( verbose ) { console.log( "index.html > assignCondition condition received from turk url: " + condition ); }
         assignParameters( condition );
     } else if ( offline ) {
         // if you are offline, determine a condition randomly
         condition = Math.floor( Math.random() * numcond );
-        console.log( "index.html > assignCondition offline, so generated condition randomly: " + condition );
+        if ( verbose ) { console.log( "index.html > assignCondition offline, so generated condition randomly: " + condition ); }
         assignParameters( condition );
     } else {
         // otherwise choose a condition to balance against those already in database
@@ -116,12 +121,12 @@ function assignCondition() {
             data: { 'table': table, 'subjid': subjid, 'condition': condition, 'numcond': numcond },
             success: function(data) {
                 condition = data;
-                console.log( "index.html > assignCondition used database call, generated condition: " + condition );
+                if ( verbose ) { console.log( "index.html > assignCondition used database call, generated condition: " + condition ); }
                 assignParameters( condition );
             },
             error: function(data) {
                 condition = Math.floor( Math.random() * numsubcond );
-                console.log( "index.html > assignCondition database call failed, generated subcondition: " + condition );
+                if ( verbose ) { console.log( "index.html > assignCondition database call failed, generated subcondition: " + condition ); }
                 assignParameters( condition );
             }});
     }
@@ -186,11 +191,11 @@ function assignParameters( condition ) {
         // params should only be in localStorage (or cookie) for this participant 
         // if we are in turk and the worker has previously previewed the HIT and has now accepted it
         // in this case, we recover the stored parameters instead of generating new ones, so the accepted HIT will be identical to the previewed one
-        console.log( "index.html > assignParameters retrieving subcondition & parameters from local storage." );
+        if ( verbose ) { console.log( "index.html > assignParameters retrieving subcondition & parameters from local storage." ); }
         var params = getLocalStorage( [
             "subcondition", "question_order", "answer_order", "term_consistency",
             "q1_term_order", "q1_base_num", "q1_exp_num", "q2_term_order", "q2_base_num", "q2_exp_num" ] );
-        console.log( "index.html > assignParameters. " + dataToString( params ) );
+        if ( verbose ) { console.log( "index.html > assignParameters. " + dataToString( params ) ); }
         $.extend( trial_data, { "condition": condition }, params );
         doTrial( condition, params );
     } else {
@@ -218,7 +223,7 @@ function assignParameters( condition ) {
             params[ 'q2_base_num'    ]  = numbers[0];
             params[ 'q2_exp_num'     ]  = numbers[1];
             // report and record assigned parameters, and save to local storage if possible
-            console.log( "index.html > assignParameters. " + dataToString( params ) );
+            if ( verbose ) { console.log( "index.html > assignParameters. " + dataToString( params ) ); }
             $.extend( trial_data, { "condition": condition }, params );
             setLocalStorage( $.extend( { 'condition': condition }, params ) );
             // start the trial
@@ -228,7 +233,7 @@ function assignParameters( condition ) {
         // then call proceed on the result
         if ( offline ) {
             // if we are working offline, parameters are generated randomly
-            console.log( "index.html > assignParameters offline, generating subcondition & parameters randomly." );
+            if ( verbose ) { console.log( "index.html > assignParameters offline, generating subcondition & parameters randomly." ); }
             proceed( condition );
         } else  {
             // we are either not on turk or on turk and viewing the HIT for the first time
@@ -236,13 +241,15 @@ function assignParameters( condition ) {
             $.ajax( { type: 'post', cache: false, url: 'assign_subcondition.php',
                 data: { 'table': table, 'subjid': subjid, 'condition': condition, 'numsubcond': 8 },
                 success: function( data ) {
-                    console.log( "index.html > assignParameters generated subcondition using database, generating parameters." );
+                    if ( verbose ) { console.log( "index.html > assignParameters generated subcondition using database, generating parameters." ); }
                     var subcondition = JSON.parse( data );
                     proceed( condition, subcondition );
                     },
                 error: function( data ) {
-                    console.log( "index.html > assignParameters database access failed: " + data.statusText );
-                    console.log( "index.html > assignParameters generating subcondition & parameters randomly." );
+                    if ( verbose ) { 
+                        console.log( "index.html > assignParameters database access failed: " + data.statusText );
+                        console.log( "index.html > assignParameters generating subcondition & parameters randomly." );
+                    }
                     proceed( condition );
                 } } );
         }
@@ -306,11 +313,11 @@ function doTrial( condition, parameters ) {
                         'table': table,
                         'json': JSON.stringify(trial_data) },
                       success: function(d) {
-                        console.log( "submitData succeeded with result: " + d );
+                        if ( verbose ) { console.log( "submitData succeeded with result: " + d ); }
                         next();
                       },
                       error: function(d) {
-                        console.log( "submitData failed with error " + d.statusText );
+                        if ( verbose ) { console.log( "submitData failed with error " + d.statusText ); }
                         next();
                       }
                     } );
@@ -329,7 +336,7 @@ function submitHIT() {
         $('#my_form').append( '<input type="hidden" id="' + key + '" name="' + key + '" value="">' );
         $('#'+key).val( trial_data[key] );
     }
-    console.log( "submitHIT assignmentId: " + $('#assignmentId').val() );
+    if ( verbose ) { console.log( "submitHIT assignmentId: " + $('#assignmentId').val() ); }
     // submit the form to Turk
     var action = sandbox ?
         "https://workersandbox.mturk.com/mturk/externalSubmit" :

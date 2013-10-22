@@ -248,45 +248,42 @@ function checkLocalStorage( key, value ) {
 function getLocalStorage( keys ) {
     var result = {};
     if ( localStorage ) {
-    // if ( localStorage && false ) {  // testing only
-        console.log( "getLocalStorage retrieving information from local storage." );
+        // console.log( "getLocalStorage retrieving information from local storage." );
         for ( var i=0; i<keys.length; i++ ) {
             result[ keys[i] ] = localStorage.getItem( keys[i] );
         }
     } else if ( are_cookies_enabled() ) {
-        console.log( "getLocalStorage retrieving information from cookies." );
+        // console.log( "getLocalStorage retrieving information from cookies." );
         for ( var i=0; i<keys.length; i++ ) {
             result[ keys[i] ] = readCookie( keys[i] );
         }
     } else {
-        console.log( "getLocalStorage failed: local storage not supported." );
+        // console.log( "getLocalStorage failed: local storage not supported." );
     }
     return result;
 }
 
 function setLocalStorage( arr ) {
     if ( localStorage ) {
-    // if ( localStorage && false ) {  // testing only
-        console.log( "setLocalStorage saving information to local storage." );
+        // console.log( "setLocalStorage saving information to local storage." );
         for ( var key in arr ) { localStorage[ key ] = arr[ key ]; }
     } else if ( are_cookies_enabled() ) {
-        console.log( "setLocalStorage saving information using cookies." );
+        // console.log( "setLocalStorage saving information using cookies." );
         for ( var key in arr ) { createCookie( key, arr[ key ], 1 ); }
     } else {
-        console.log( "setLocalStorage failed: local storage not supported." );
+        // console.log( "setLocalStorage failed: local storage not supported." );
     }
 }
 
 function clearLocalStorage( keys ) {
     if ( localStorage ) {
-    // if ( localStorage && false ) {  // testing only
-        console.log( "clearLocalStorage clearing localStorage." );
+        // console.log( "clearLocalStorage clearing localStorage." );
         for ( var i=0; i<keys.length; i++ ) { localStorage.removeItem( keys[i] ); }
     } else if ( are_cookies_enabled() ) {
-        console.log( "setLocalStorage clearing cookies." );
+        // console.log( "setLocalStorage clearing cookies." );
         for ( var i=0; i<keys.length; i++ ) { eraseCookie( keys[i] ); }
     } else {
-        console.log( "clearLocalStorage called, but localStorage not enabled." );
+        // console.log( "clearLocalStorage called, but localStorage not enabled." );
     }
 }
 

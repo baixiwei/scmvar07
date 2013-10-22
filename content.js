@@ -10,12 +10,14 @@
 // when a button is pressed, if live is true, saves specs.data, response, and accuracy to data, then calls on_select
 function displayButtonChoice( target_div, live, on_select, specs, data ) {
 
-    console.log( "content.js > displayTrial called. live: " + live );
+    // console.log( "content.js > displayTrial called. live: " + live );
 
     // display trial content to target div
     var content = specs.text;
     for ( var i=0; i<specs.answers.length; i++ ) {
-        content += "<p><button id='button_" + i + "' type='button' class='trial_answer_button'>" + specs.answers[i] + "</button></p>";
+        content += "<button id='button_" + i + "' type='button' class='trial_answer_button'>" + specs.answers[i] + "</button>";
+        // content += "<p><button id='button_" + i + "' type='button' class='trial_answer_button'>" + specs.answers[i] + "</button></p>";
+        if ( i<specs.answers.length-1 ) { content += "<br><br>"; }
     }
     target_div.html( content );
 
@@ -31,7 +33,7 @@ function displayButtonChoice( target_div, live, on_select, specs, data ) {
                 // record response and accuracy
                 data.response = Number( $(this).attr('id').slice(7) );
                 data.accuracy = Number( data.response==data.key );
-                console.log( "displayButtonChoice > response logged: " + data.response );
+                // console.log( "displayButtonChoice > response logged: " + data.response );
                 // call on_select (this can e.g. activate an external submit button)
                 on_select();
                 } );
@@ -137,7 +139,7 @@ var getPairIdxs = function( n ) {
             result.push( [i,j] );
         }
     }
-    console.log( "getPairIdxs returned list of length " + result.length );
+    // console.log( "getPairIdxs returned list of length " + result.length );
     return result;
 }
 
@@ -152,7 +154,7 @@ var getPairIdxs = function( n ) {
 // Question
 //  a Question object contains information about one stimulus for test or training
 //  once the instantiate method has been called, the object can serve as a parameter array for jspsych_test or jspsych_training
-Question = function( schema, quesID, base_noun, exp_noun, base_label, exp_label, text_long ) {
+Question = function( quesID, schema, base_noun, exp_noun, base_label, exp_label, text_long ) {
     this.schema         = schema;
     this.quesID         = quesID;
     this.text_long      = text_long;
@@ -174,184 +176,251 @@ var instantiateQuestion = function( order, base_num, exp_num ) {
 
 
 // getQuestionList returns an array of all the stimuli for this experiment
-// They are based on exp 6 with minor revision; quesIDs are consistent with exp 6 where possible
+// They are based on exp 6 with minor revision (some but not all revisions noted)
+// quesIDs are those used in exp 6 where applicable, except with some multiple of 100 added
+// the questions which were used in exp 6 are: 101-106, 207-212, 421-426, and 527-532
 function getQuestionList() {
 
     var questions = [
-        // PCO training questions
-        new Question( "PCO", 1, "meals", "friends", "meal", "friend",
-            "<p>A group of friends is eating at a restaurant. Each person chooses a meal from the menu. (It is possible for multiple people to choose the same meal.)</p><p>In how many different ways can the friends choose their meals, if there are {0} {1} and {2} {3}?</p>" ), 
-        new Question( "PCO", 2, "pizza brands", "consumers", "pizza brand", "consumer",
-            "<p>A marketing research company conducts a taste test survey. Several consumers are each asked to choose their favorite from among several pizza brands. (It is possible for multiple consumers to choose the same brand.)</p><p>How many different results of the survey are possible, if there are {0} {1} and {2} {3}?</p>" ), 
-        new Question( "PCO", 3, "possible majors", "students", "major", "student", 
-            "<p>Several college freshmen are discussing what they want to study in college. Each of them has to choose a major from a fixed list of options. (Of course, it is possible for more than one to choose the same major.)</p><p>In how many different ways can the students choose their majors, if there are {0} {1} and {2} {3}?</p>" ),
-        new Question( "PCO", 4, "types of toy", "children", "toy", "child",
-            "<p>During playtime at a kindergarten, the teacher offers the children a number of different types of toy. Each child has to choose one type of toy. (There are enough toys of each type that more than one child, or even all of them, can choose the same type.)</p><p>In how many different ways can the children choose their toys, if there are {0} {1} and {2} {3}?</p>" ),
-        new Question( "PCO", 5, "stocks", "bankers", "stock", "banker",
-            "<p>Amy has decided to invest in one of several stocks. She asks several bankers for their advice, and each banker chooses one of the stocks to advise her to buy. (It is possible for more than one banker to choose the same stock.)</p><p>In how many different ways can the bankers choose stocks, if there are {0} {1} and {2} {3}?</p>" ),
-        new Question( "PCO", 6, "trails", "hikers", "trail", "hiker",
-            "<p>Several hikers go hiking at a national park that has numerous hiking trails. Each hiker chooses one of the trails to hike on. (It is possible for more than one hiker to choose the same trail.)</p><p>In how many different ways can the hikers choose trails, if there are {0} {1} and {2} {3}?</p>" ),
-        // OSS training questions
-        new Question( "OSS", 7, "keys in the set", "notes in each melody", "key", "note",
-            "<p>A piano student, when bored, plays random melodies on the piano. Each melody is the same number of notes long, and uses only keys from a fixed set of keys. (It is possible to play the same key more than once in a sequence.)</p><p>How many different melodies are possible, if there are {0} {1} and {2} {3}?</p>" ),
-        new Question( "OSS", 8, "allowable letters", "letters in each password", "letter", "position",
-            "<p>A website generates user passwords by selecting a certain number of letters randomly from a set of allowable letters. (It is possible to use the same letter more than once in a password.)</p><p>How many different passwords are possible, if there are {0} {1} and {2} {3}?</p>" ),
-        new Question( "OSS", 9, "buttons", "flashes per sequence", "button", "flash", 
-            "<p>The game Simon uses a disk with several different-colored buttons. The buttons flash in sequence and then the player has to push the buttons in the same sequence - otherwise they get a shock. (It is possible for the same button to flash more than once in a sequence.)</p><p>How many different sequences are possible, if there are {0} {1} and {2} {3}?</p>" ),
-        new Question( "OSS", 10, "permissible numbers", "numbers on each ticket", "number", "position",
-            "<p>In a certain city, municipal lottery tickets are printed using series of numbers chosen randomly from a list of permissible numbers. (It is possible for the same number to appear at more than one position in a series.)</p><p>How many different lottery tickets are possible, if there are {0} {1} and {2} {3}?</p>",
-            "<p>Now suppose there are {0} {1} and {2} {3}. How many different lottery tickets are possible now?</p>" ),
-        new Question( "OSS", 11, "answers for each question", "questions on the exam", "answer", "question",
-            "<p>A student is taking a multiple choice exam. Each question has the same number of answers and the student just chooses an answer randomly. (It is possible for him to choose the same answer for more than one question.)</p><p>In how many different ways can he fill out the exam, if there are {0} {1} and {2} {3}?</p>" ),
-        new Question( "OSS", 12, "dresses", "days with dances", "dress", "day",
-            "<p>Elizabeth is going to attend a dance every day for the next several days. Each day, she chooses a dress to wear to the dance. (It is possible for her to choose the same dress on more than one day.)</p><p>In how many different ways can she choose her dresses, if there are {0} {1} and {2} {3}?</p>" ),
-        // OAPlc training questions
-        new Question( "OAPlc", 13, "public works", "city districts", "public work", "city district",
-            "<p>A city is planning to build new public works, such as libraries, parks, bridges, etc. <span id='contrast'>In each city district, the government must decide which public work to build. They could build the same public work in more than one district, but they will not build more than one public work in a given district.</span></p><p>In how many different ways can they make their decisions, if there are {0} {1} and {2} {3}?</p>" ),
-        new Question( "OAPlc", 14, "browsers", "computers", "browser", "computer",
-            "<p>An IT manager is installing internet browsers, like IE, Firefox, and Chrome, on some office computers. <span id='contrast'>One browser will be installed on each computer. The same browser could be installed on more than one computer, but a given computer will not have more than one browser installed.</span></p><p>In how many different ways can he choose which browsers are installed on which computers, if there are {0} {1} and {2} {3}?</p>" ),
-        new Question( "OAPlc", 15, "countries", "exhibit halls", "country", "exhibit hall",
-            "<p>A museum is planning to use several of its exhibit halls to show modern art from various countries, such as France, Germany, and the USA. <span id='contrast'>Each exhibit hall will be used to display art from one of the countries. The same country's art might be displayed in more than one hall, but a single hall will not display art from more than one country.</span></p><p>In how many different ways can the museum choose which countries to display in which exhibit halls, if there are {0} {1} and {2} {3}?</p>" ),
-        new Question( "OAPlc", 16, "different nuts", "hiding places", "nut", "hiding place", 
-            "<p>A squirrel collects various different kinds of nuts, like walnuts, chestnuts, peanuts, etc. <span id='contrast'>The squirrel will use each of several hiding places to hide one kind of nut. It might hide the same kind of nut in more than one hiding place, but it will not hide more than one kind of nut in a given hiding place.</span></p><p>In how many different ways can the squirrel hide his nuts, if there are {0} {1} and {2} {3}?</p>" ),
-        // ROAPlc training questions
-        new Question( "ROAPlc", 17, "city districts", "public works", "district", "public work",
-            "<p>A city is planning to build new public works, such as libraries, parks, bridges, etc. <span id='contrast'>For each public work, the government must decide in which city district to build it. They could build more than one public work in a given district, but they will not build the same public work in more than one district.</span></p><p>In how many different ways can they make their decisions, if there are {0} {1} and {2} {3}?</p>" ),
-        new Question( "ROAPlc", 18, "computers", "browsers", "computer", "browser", 
-            "<p>An IT manager is installing internet browsers, like IE, Firefox, and Chrome, on some office computers. <span id='contrast'>Each browser will be installed on one of the computers.  A given computer could have more than one browser installed on it, but the same browser cannot be installed on more than one computer, because of licensing requirements.</span></p><p>In how many different ways can he choose which browsers are installed on which computers, if there are {0} {1} and {2} {3}?</p>" ),
-        new Question( "ROAPlc", 19, "exhibit halls", "countries", "exhibit hall", "country",
-            "<p>A museum is planning to use some of its exhibit halls to show modern art from various countries, such as France, Germany, and the USA. <span id='contrast'>One of the exhibit halls will be used to display art from each country. A single hall might display art from more than one country, but the same country's art will not be displayed in more than one hall.</span></p><p>In how many different ways can the museum choose which countries to display in which exhibit halls, if there are {0} {1} and {2} {3}?</p>" ),
-        new Question( "ROAPlc", 20, "hiding places", "different nuts", "hiding place", "nut",
-            "<p>A squirrel has collected several different nuts, including a walnut, a chestnut, a peanut, etc. <span id='contrast'>The squirrel will use one of several hiding places for each nut. It might hide more than one nut in the same hiding place, but it only has one nut of each kind, so it cannot hide the same kind of nut in more than one hiding place.</span></p><p>In how many different ways can the squirrel hide his nuts, if there are {0} {1} and {2} {3}?</p>" ),
-        // test set 1
-        new Question( "OAPlc", 21, "colors", "rooms", "color", "room",
-            "<p>A homeowner is going to repaint several rooms in her house. She chooses one color of paint for the living room, one for the dining room, one for the family room, and so on. (It is possible for multiple rooms to be painted the same color.)</p><p>In how many different ways can she paint the rooms, if there are {0} {1} and {2} {3}?</p>" ),
-        new Question( "CAE", 22, "categories", "paranormal events", "category", "event",
-            "<p>An FBI agent is investigating several paranormal events. She must write a report classifying each event into a category such as Possession, Haunting, Werewolf, and so on.</p><p>In how many different ways can she write her report, if there are {0} {1} and {2} {3}?</p>" ),
-        new Question( "OAPpl", 23, "employees", "prizes", "employee", "prize",
-            "<p>A prize drawing is held at a small office party, and each of several prizes is awarded to one of the employees. (It is possible for multiple prizes to be awarded to the same employee.)</p><p>In how many different ways can the prizes be awarded, if there are {0} {1} and {2} {3}?</p>" ),
-        new Question( "PCO", 24, "fishing spots", "fishermen", "spot", "fisherman",
-            "<p>Several fishermen go fishing in the same lake, and each of them chooses one of several spots at which to fish. (It is possible for more than one fisherman to choose the same spot.)</p><p>In how many different ways can the fishermen choose their spots, if there are {0} {1} and {2} {3}?</p>" ),
-        new Question( "OSS", 25, "types of wine", "courses in the meal", "type of wine", "course",
-            "<p>A gourmet chef is preparing a fancy several-course meal. There are several types of wine available, and the chef needs to choose one wine to serve with each course. (It is possible for the same wine to be served with more than one course.)</p><p>In how many different ways can the wines be chosen, if there are {0} {1} and {2} {3}?</p>" ),
-        new Question( "OAPpl", 26, "sons", "houses", "son", "house",
-            "<p>A wealthy old woman is writing her will. She owns several houses, and wishes to leave each house to one of her sons. (It is possible for her to leave more than one house to the same son.)</p><p>In how many different ways can she write this part of her will, if there are {0} {1} and {2} {3}?</p>" ),
-        // test set 2
-        new Question( "OAPlc", 27, "crops", "fields", "crop", "field",
-            "<p>A farmer is planning what crops he will plant this year. He chooses one crop for each of several fields. (It is possible for multiple fields to receive the same crop.)</p><p>In how many different ways can the farmer plant his crops, if there are {0} {1} and {2} {3}?</p>" ),
-        new Question( "CAE", 28, "categories", "weather events", "category", "event", 
-            "<p>A meteorologist must write a report classifying each extreme weather event which occurred in the past year into a category such as Hurricane, Tropical Storm, etc.</p><p>In how many different ways can he write his report, if there are {0} {1} and {2} {3}?</p>" ),
-        new Question( "OAPpl", 29, "children", "provinces", "child", "province",
-            "<p>An aging king plans to divide his lands among his heirs. Each province of the kingdom will be assigned to one of his many children. (It is possible for multiple provinces to be assigned to the same child.)</p><p>In how many different ways can the provinces be assigned, if there are {0} {1} and {2} {3}?</p>" ),
-        new Question( "PCO", 30, "treatments", "doctors", "treatment", "doctor",
-            "<p>There are several possible treatments for a certain rare disease. A patient with this disease consults several doctors, and each doctor recommends one of the possible treatments. (It is possible for more than one doctor to recommend the same treatment.)</p><p>In how many different ways can the doctors make their recommendations, if there are {0} {1} and {2} {3}?</p>" ),
-        new Question( "OSS", 31, "colognes to choose from", "dates", "cologne", "date", 
-            "<p>Don Juan has one date with each of a merchant's daughters. For each date, he puts on a cologne he thinks that daughter will like. (It is possible for him to choose the same cologne for more than one date.)</p><p>In how many different ways can he choose colognes for his dates, if there are {0} {1} and {2} {3}?</p>" ),
-        new Question( "OAPpl", 32, "detectives", "cases", "detective", "case", 
-            "<p>A police department receives several new cases in one day. Each new case is assigned to one of the detectives. (It is possible for multiple cases to be assigned to the same detective.)</p><p>In how many different ways can the cases be assigned, if there are {0} {1} and {2} {3}?</p>" )
-        // starting from here are new questions not included in Exp 6
+// PCO training questions
+
+// problems 101-106 were used in exp 6
+    
+new Question( 101, "PCO", "meals", "friends", "meal", "friend",
+    // as of exp 7, changed "person" to "friend" in sentences 2-3
+    "<p>A group of friends is eating at a restaurant. Each friend chooses a meal from the menu. (It is possible for multiple friends to choose the same meal.)</p><p>In how many different ways can the friends choose their meals, if there are {0} {1} and {2} {3}?</p>" ), 
+
+new Question( 102, "PCO", "pizza brands", "consumers", "pizza brand", "consumer",
+    "<p>A marketing research company conducts a taste test survey. Several consumers are each asked to choose their favorite from among several pizza brands. (It is possible for multiple consumers to choose the same brand.)</p><p>How many different results of the survey are possible, if there are {0} {1} and {2} {3}?</p>" ), 
+
+new Question( 103, "PCO", "majors", "students", "major", "student",
+    "<p>Several college freshmen are discussing what they want to study in college. Each of them has to choose a major from a list of available majors. (Of course, it is possible for more than one to choose the same major.)</p><p>In how many different ways can the students choose their majors, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 104, "PCO", "types of toy", "children", "toy", "child",
+    "<p>During playtime at a kindergarten, the teacher offers the children a number of different types of toy. Each child has to choose one type of toy. (There are enough toys of each type that more than one child, or even all of them, can choose the same type.)</p><p>In how many different ways can the children choose their toys, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 105, "PCO", "stocks", "bankers", "stock", "banker",
+    "<p>Amy has decided to invest in one of several stocks. She asks several bankers for their advice, and each banker chooses one of the stocks to advise her to buy. (It is possible for more than one banker to choose the same stock.)</p><p>In how many different ways can the bankers choose stocks, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 106, "PCO", "trails", "hikers", "trail", "hiker",
+    // changed "choose the same" to "hike on the same" in the parenthetical expression
+    "<p>Several hikers go hiking at a national park that has numerous hiking trails. Each hiker chooses one of the trails to hike on. (It is possible for more than one hiker to hike on the same trail.)</p><p>In how many different ways can the hikers choose trails, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 107, "PCO", "horses", "gamblers", "horse", "gambler",
+    "<p>Several gamblers are watching a horse race. Each of them bets on one of the horses to win. (More than one gambler can bet on the same horse.)</p><p>In how many different ways can the gamblers place their bets, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 108, "PCO", "signs", "fans", "sign", "fan",
+    "<p>Fans attending the basketball game are given a sign with admission to the game. Each fan chooses from several different signs offered, such as \"D-fense,\" \"play hard,\" \"get loud,\" etc. (The same sign can be chosen by more than one fan.)</p><p>In how many different ways can the fans choose their signs, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 109, "PCO", "songs", "singers", "song", "singer",
+    "<p>At an audition for singers, several singers receive a list of songs, and each one has to pick one of the songs to sing. (It is possible for more than one singer to choose the same song.)</p><p>In how many different ways can the singers pick their songs, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 110, "PCO", "spa packages", "vacationers", "package", "vacationer",
+    "<p>A group of vacationers go to their resort spa, where various spa packages are offered. Each person chooses a spa package. (It is possible for multiple people to choose the same spa package.)</p><p>In how many different ways can the vacationers pick their spa packages, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 111, "PCO", "types of bat", "players", "bat", "player",
+    "<p>During batting practice for a baseball team, the coach offers the players a variety of different bats to use, e.g. wood, aluminum, hybrid, etc. Each player picks out one of these. (There are enough bats of each type that more than one player, or even all of them, can choose the same type.)</p><p>In how many different ways can the baseball team pick their bat, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 112, "PCO", "essays", "judges", "essay", "judge",
+    "<p>A local organization is holding an essay competition. To determine which essay will qualify for the next round, the judges of the competition must each vote for their favorite essay. (It is possible for a single essay to receive more than one vote, but each judge has only one vote.)</p><p>In how many ways can the judges cast their votes, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 113, "PCO", "parts available", "actors trying out", "part", "actor",
+    "<p>Several actors come to try out for a play, and there are several parts available. However, a given actor can only try out for one part. (It is possible for more than one actor to try out for the same part.)</p><p>In how many different ways can the actors try out for parts, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 114, "PCO", "star ratings", "critics", "star", "critic",
+    "<p>Several restaurant critics all rate the same restaurant using a star rating system, i.e. from one star to the maximum number of stars. Each critic rates the restaurant separately (but it is possible that more than one critic might give the same rating).</p><p>In how many different ways can the critics rate the restaurant, if there are {0} {1} and {2} {3}?</p>" ),
+    
+new Question( 115, "PCO", "issues", "candidates", "issue", "candidate",
+    "<p>In a primary election for a political party, there are several hot political issues, such as reducing crime, improving education, reining in the deficit, and so on.  Each candidate in the primary decides to focus on one of these issues as the center of their campaign.  (More than one candidate might focus on the same issue.)</p><p>In how many different ways can the issues be selected by the candidates, if there are {0} {1} and {2} {3}?</p>" ),
+    
+new Question( 116, "PCO", "textbooks", "history teachers", "textbook", "teacher",
+    "<p>In a certain high school, there are several different textbooks used for a world history course.  Each history teacher can use whichever textbook he or she prefers.  (The same textbook can be used by more than one teacher.)</p><p>In how many different ways can textbooks be selected by the history teachers, if there are {0} {1} and {2} {3}?</p>" ),
+    
+new Question( 117, "PCO", "crimes", "journalists", "crime", "journalist",
+    "<p>In a certain city, several major crimes occurred in the past week.  The crime journalists working at the city's newspapers each must decide which of these crimes to report on.  (The journalists work at different newspapers, so more than one could report on the same crime.)</p><p>In how many different ways can the journalists report on the crimes, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 118, "PCO", "presentations occurring at the same time", "professors", "presentation", "professor",
+    "<p>Several professors from the same university are attending a conference.  There are several presentations occurring at the same time, so each professor can only attend one of them.  (However, more than one professor can attend the same presentation.)</p><p>In how many different ways can the professors attend the presentations, if there are {0} {1} and {2} {3}?</p>" ),
+    
+new Question( 119, "PCO", "topics", "contestants", "topic", "contestant",
+    "<p>On a TV game show, during each round, each contestant must answer a trivia question correctly in order to move on to the next round.  The contestants can pick the topic of the question they will answer from the topics available.  (The same topic can be chosen by more than one contestant.)</p><p>In a given round, in how many different ways can the contestants pick their topics, if there are {0} {1} and {2} {3}?</p>" ),
+    
+new Question( 120, "PCO", "famous buildings", "painters", "building", "painter",
+    "<p>Several painters visit a city famous for its beautiful architecture.  Each painter paints one of the famous buildings in the city.  (More than one of them might paint the same building.)</p><p>In how many different ways can the painters select which buildings to paint, if there are {0} {1} and {2} {3}?</p>" ),    
+    
+// OSS training questions
+
+new Question( 201, "OSS", "hotels that she likes", "trips to Berlin", "hotel", "trip",
+    "<p>Sheila goes to Berlin on business several times each year, and each time she goes, she stays at one of several hotels that she likes. (There might be more than one time when she stays at the same hotel.)</p><p>In how many different ways could she plan her hotel stays this year, if there are {0} {1} and {2} {3}?</p>" ),
+    
+new Question( 202, "OSS", "plot elements", "scenes in a script", "element", "scene",
+    "<p>ScriptWriter Pro is a software that helps script writers come up with movie scripts by randomly generating script outlines. A script outline contains a certain number of scenes, with each scene containing a single plot element, such as \"exposition,\" \"action,\" \"suspense,\" and so on. (The same plot element could be used more than once in a script outline.)</p><p>How many different script outlines are possible, if there are {0} {1} and {2} {3}?</p>" ),
+    
+new Question( 203, "OSS", "moves that she has learned", "moves in one message", "move", "position",
+    "<p>Felicia is learning flag semaphore, a system for sending messages by making different moves with flags held in each hand. She can send different messages by making different moves in different sequences. (It is possible to make the same move more than once in a message.)</p><p>How many different messages can Felicia send, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 204, "OSS", "games on his phone", "hours to kill", "game", "hour",
+    "<p>Suppose Jose has several hours to kill. He spends each hour playing one of the games on his phone. (He might play the same game on more than one hour.)</p><p>In how many different ways can he kill the time, if there are {0} {1} and {2} {3}?</p>" ),
+    
+new Question( 205, "OSS", "distinct hieroglyphs", "hieroglyphs in each sentence", "hieroglyph", "sentence position",
+    "<p>Archaeologists discover records of an ancient language whose writing system was based on hieroglyphs.  Strangely, each sentence in the language contained the same number of hieroglyphs (and a given hieroglyph could be repeated multiple times within a sentence).</p><p>How many different sentences were possible in this language, if there were {0} {1} and {2} {3}?</p>" ),
+    
+// problems 206-212 were used in exp 6
+    
+new Question( 206, "OSS", "shops in the shopping center", "pages in a booklet", "shop", "page",
+    "<p>A clerk at a shopping center passes out coupon booklets to shoppers.  Each page of the booklets contains a coupon for one of the shops in the center, selected randomly.  (It is possible for more than one page to contain coupons for the same shop.)</p><p>How many different coupon booklets are possible, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 207, "OSS", "keys in the set", "notes in each melody", "key", "note",
+    "<p>A piano student, when bored, plays random melodies on the piano. Each melody is the same number of notes long, and uses only keys from a fixed set of keys. (It is possible to play the same key more than once in a sequence.)</p><p>How many different melodies are possible, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 208, "OSS", "allowable letters", "letters in each password", "letter", "position",
+    "<p>A website generates user passwords by selecting a certain number of letters randomly from a set of allowable letters. (It is possible to use the same letter more than once in a password.)</p><p>How many different passwords are possible, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 209, "OSS", "buttons", "flashes per sequence", "button", "flash", 
+    "<p>The game Simon uses a disk with several different-colored buttons. The buttons flash in sequence and then the player has to push the buttons in the same sequence - otherwise they get a shock. (It is possible for the same button to flash more than once in a sequence.)</p><p>How many different sequences are possible, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 210, "OSS", "permissible numbers", "numbers on each ticket", "number", "position",
+    "<p>In a certain city, municipal lottery tickets are printed using series of numbers chosen randomly from a list of permissible numbers. (It is possible for the same number to appear at more than one position in a series.)</p><p>How many different lottery tickets are possible, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 211, "OSS", "answers for each question", "questions on the exam", "answer", "question",
+    "<p>A student is taking a multiple choice exam. Each question has the same number of answers and the student just chooses an answer randomly. (It is possible for him to choose the same answer for more than one question.)</p><p>In how many different ways can he fill out the exam, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 212, "OSS", "dresses", "days with dances", "dress", "day",
+    "<p>Elizabeth is going to attend a dance every day for the next several days. Each day, she chooses a dress to wear to the dance. (It is possible for her to choose the same dress on more than one day.)</p><p>In how many different ways can she choose her dresses, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 213, "OSS", "modes of transport", "legs of the trip", "mode", "leg",
+    "<p>Tonia is taking a trip from Chicago to Los Angeles, passing through several cities on the way. On each leg of the trip, she can use any of several modes of transport, such as bus, train, or airplane. (There might be more than one leg of the trip for which she uses the same mode of transport.)</p><p>In how many different ways can she travel from Chicago to Los Angeles, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 214, "OSS", "controller buttons", "button presses per combination", "controller button", "button press",
+    "<p>In a video game about martial arts fighting, you can make a character do cool moves by pressing several buttons on the controller in a certain order, such as \"up-left-down-...\". Each combination consists of the same number of button presses. (The same button might need to be pressed more than once in a given combination.)</p><p>How many different combinations are possible, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 215, "OSS", "possible hand gestures", "gestures in a handshake", "possible movement", "movement position",
+    "<p>The Gamma Gamma Gamma fraternity wants to invent a special handshake for fraternity brothers. The handshake will involve a series of hand gestures such as bumping fists, high five, or thumbs-up. (It is possible to repeat the same gesture more than once during the handshake.)</p><p>How many different handshakes are possible, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 216, "OSS", "different words", "words per line", "word", "position",
+    "<p>Suppose Phil owns a \"magnetic poetry\" set which can be used to create lines of poetry by sticking magnetic words onto the refrigerator. Suppose he creates different lines which all contain the same number of words. (He has an unlimited supply of each word, so he can use the same word more than once in a single line.)</p><p>How many different lines of poetry can Phil create if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 217, "OSS", "bead materials", "beads on each bracelet", "material", "bead",
+    "<p>A jeweler makes bracelets by stringing together beads made of different materials, such as gold, silver, titanium, etc. Each bracelet has the same number of beads on it. (It is possible for the same bead material to be repeated more than once on a single bracelet.)</p><p>How many different bracelets are possible, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 218, "OSS", "flavors", "layers in each cake", "flavor", "layer",
+    "<p>A baker is making layer cakes by selecting various flavors of cakes to stack in layers.  He chooses the layer flavors randomly from the selection of flavors he has in his store, such as chocolate, vanilla, red velvet, etc. (It is possible to use the same flavor more than once in a cake.)</p><p>How many different layer cakes are possible if there are {0} {1} and {2} {3}?</p>" ),
+    
+new Question( 219, "OSS", "breeds of flower", "flowers per row", "breed", "flower",
+    "<p>A large mansion grows many breeds of flower, like roses, pansies, and irises, which are used to decorate the mansion.  The housekeeper places a row of flowers on each window sill, using the same number of flowers in each row, but varying the specific breeds and their order.  (The same breed can be used more than once in a row.)</p><p>How many different rows of flowers are possible, if there are {0} {1} and {2} {3}?</p>" ),
+    
+new Question( 220, "OSS", "cellphone models", "phones in each row", "model", "position",
+    "<p>Each display case in a cellphone store contains a row of cellphones selected from the models currently on sale.  The cases are all the same size, so there are the same number of phones in each row.  (A given cellphone model might appear multiple times in a single row, for example if it is a very popular phone.)</p><p>How many different ways are there to fill a display case, if there are {0} {1} and {2} {3}?</p>" ),
+
+// TFR training questions
+
+new Question( 301, "TFR", "fonts", "document styles", "font", "document style",
+    "<p>In Microsoft Word, different document styles are used to format text in different parts of the document, such as \"title,\" \"chapter heading,\" \"sub-section heading,\" etc. A font must be assigned to each document style. (It is possible to assign the same font to more than one document style.)</p><p>In how many ways can fonts be assigned to document styles, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 302, "TFR", "ring tones", "types of ring", "ring tone", "type of ring",
+    "<p>A smartphone comes pre-loaded with various ring tones.  For each type of ring, such as \"incoming call,\" \"alarm,\" \"new mail,\" etc., you can set any of the ring tones. (It is possible to set the same ring tone for multiple types of ring.)</p><p>In how many different ways can types of ring be set with ring tones, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 303, "TFR", "icons", "triggers", "icon", "trigger",
+    "<p>Suppose the settings on a computer allow one to set what kind of icon is used for the mouse pointer, e.g. an arrow, a hand, a vertical line, etc. Icons can be set separately for a variety of \"triggers,\" like \"clicking something,\" \"hovering over a link,\" \"waiting for something,\" and so on. (The same icon could be set for more than one trigger.)</p><p>In how many different ways can icons be set for triggers, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 304, "TFR", "devices", "activities", "device", "activity",
+    "<p>Sharon owns many different electronic devices, like a desktop computer, laptop computer, smartphone, etc., which she uses for activities like homework, surfing the net, and email. For a given activity, she always uses the same device. (She might use the same device for more than one activity.)</p><p>In how many different ways can she choose devices for activities, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 305, "TFR", "shapes", "occasions", "shape", "occasion",
+    "<p>Tanisha the baker makes cakes for all occasions, like birthdays, weddings, and anniversaries. She likes to make cakes in different shapes, e.g. round, square, or oval, but for any given occasion, she always uses the same shape. (However, there might be more than one occasion for which she uses the same shape.)</p><p>In how many different ways could she assign shapes of cake to occasions, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 306, "TFR", "screen savers", "types of software", "screen saver", "software",
+    "<p>Alma's new computer comes with multiple different screen savers. The screen saver can be set separately depending on what kind of software is open on the computer, so that, for example, Alma could set one screen saver to activate when using Office software, another for internet browsers, another for games, and so on. (It is also possible to set the same screen saver for more than one type of software.)</p><p>In how many different ways can the screen savers be set up, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 307, "TFR", "types of bark", "kinds of truffle", "bark", "truffle",
+    "<p>Darren is training his dog to hunt truffles. He trains it to bark differently depending on what kind of truffle it finds: for example, a sharp yip for white truffles, a loud bark for black truffles, a growl for burgundy truffles, and so on. (However, he might train the dog to make the same bark for more than one kind of truffle.)</p><p>In how many different ways can Darren train his dog, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 308, "TFR", "weapons", "enemies", "weapon", "enemy",
+    "<p>Brandi plays an Orc Barbarian in World of Warcraft. She has many weapons, like axe, sword, and spear, but she always uses the same weapon for a particular kind of enemy, such as humans, elves, and dwarves. (There might be more than one kind of enemy for which she uses the same weapon.)</p><p>In how many different ways can Brandi choose weapons for different enemies, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 309, "TFR", "pairs of sneakers", "sports that he plays", "pair of sneakers", "sport",
+    "<p>Virgil owns many pairs of sneakers and decides which one to wear depending on what sport he is going to play. For example, he might wear one pair for jogging, another for basketball, another for tennis, and so on. (There might be more than one sport for which he wears the same pair of sneakers.)</p><p>In how many different ways could he match sneakers with sports, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 310, "TFR", "sets of china", "types of guest", "set", "guest",
+    "<p>A rich family has several sets of china to use for meals. For each type of guest, there is a particular set of china they use, e.g. one set of china for family, one for friends, and one for business acquaintances. (There might be more than one type of guest for which they use the same set of china.)</p><p>In how many different ways could sets of china be matched to types of guests, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 311, "TFR", "paper grades", "document categories", "grade", "category",
+    "<p>A print shop has several different grades of paper, and uses a particular grade of paper for each category of document that it prints, e.g. glossy paper for posters, book paper for business documents, bond paper for resumes, etc. (The same paper grade could be used for more than one document category.)</p><p>In how many different ways could paper grades be matched to document categories, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 312, "TFR", "knives", "different foods", "knife", "food",
+    "<p>Russell has a few different knives in his kitchen, such as a chef's knife, a paring knife, a cleaver, etc.  For a given food, like vegetables, bread, or meat, he always cuts it with the same knife (but he might use the same knife for more than one food).</p><p>In how many different ways could Russell use knives for food, if there are {0} {1} and {2} {3}?</p>" ),
+    
+new Question( 313, "TFR", "fragrances", "product variants", "fragrance", "variant",
+    "<p>A company that makes personal care products is launching a new line of soap that includes several product variants, e.g. anti-perspirant soap, soap for sensitive skin, refreshing soap, and so on.  The product designer must give each product variant a fragrance, like lemon, lavender, or mint.  (More than one product variant could get the same fragrance.)</p><p>How many ways are there to pair fragrances with product variants, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 314, "TFR", "types of symbol", "types of building", "symbol", "building",
+    "<p>Suppose you are designing a map and you have several types of symbol which can be used to represent different types of building.  For example, red hearts could represent hospitals, yellow rectangles could represent schools, and so on.  (The same type of symbol could represent more than one type of building, since you might not need to distinguish between some types of building.)</p><p>In how many ways could symbols be matched to buildings, if there are {0} {1} and {2} {3}?</p>" ),
+    
+new Question( 315, "TFR", "bags", "types of outing", "bag", "outing",
+    "<p>Milton owns several different bags, like a backpack, a suitcase, a duffel bag, and so on.  For a given type of outing, like going to school, going camping, or traveling, he always takes the same bag.  (However, there might be more than one type of outing for which he takes the same bag.)</p><p>In how many different ways could Milton match up bags with types of outing, if there are {0} {1} and {2} {3}?</p>" ),
+    
+new Question( 316, "TFR", "kinds of chart", "data sets", "chart", "data set",
+    "<p>Suppose you are preparing a report about the population of a certain city, which will include various data sets about things like sex, age, and income.  Each data set should be displayed using one of several kinds of chart, such as pie chart, bar chart, or line graph.  (Of course, more than one data set can be displayed using the same kind of chart.)</p><p>In how many different ways could data sets be matched up with kinds of chart, if there are {0} {1} and {2} {3}?</p>" ),
+    
+new Question( 317, "TFR", "destinations", "holidays", "destination", "holiday",
+    "<p>A travel agency holds a promotion during several holidays during the year, like Thanksgiving, Christmas, Spring Break, etc.  For each holiday, they offer discounted travel to one out of of several possible travel destinations.  (They might give discounts to the same destination for more than one holiday.)</p><p>In how many different ways could the agency match destinations to holidays, if there are {0} {1} and {2} {3}?</p>" ),
+    
+new Question( 318, "TFR", "competing companies", "development projects", "company", "project",
+    "<p>A city government is planning several urban development projects, including a new bridge, a library, and a park.  For each project, the government will contract with one of several construction companies to carry it out.  (They might contract with the same company for more than one project.)</p><p>In how many different ways could the government assign contracts for the projects, if there are {0} {1} and {2} {3}?</p>" ),
+    
+new Question( 319, "TFR", "email addresses", "kinds of website", "address", "website",
+    "<p>Brandon has several email addresses.  When he enters his email address in a website, he always uses the same address for a given type of website, so he could use one address for social networks, a different one for online banking, and so on.  (However, he could use the same address for more than one kind of website.)</p><p>In how many different ways could Brandon pair up addresses with kinds of website, if there are {0} {1} and {2} {3}?</p>" ),
+    
+new Question( 320, "TFR", "kinds of diagram", "concepts", "diagram", "concept",
+    "<p>A teacher is presenting a lesson involving many difficult concepts, so she illustrates each concept with a diagram, e.g. a Venn diagram, a tree diagram, a flowchart, etc.  (She could illustrate more than one concept with the same kind of diagram.)</p><p>In how many different ways could she assign diagrams to concepts, if there are {0} {1} and {2} {3}?</p>" ),
+
+// test set 1
+
+// all of these problems were used in exp 6
+
+new Question( 421, "OAPlc", "colors", "rooms", "color", "room",
+    "<p>A homeowner is going to repaint several rooms in her house. She chooses one color of paint for the living room, one for the dining room, one for the family room, and so on. (It is possible for multiple rooms to be painted the same color.)</p><p>In how many different ways can she paint the rooms, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 422, "CAE", "categories", "paranormal events", "category", "event",
+    "<p>An FBI agent is investigating several paranormal events. She must write a report classifying each event into a category such as Possession, Haunting, Werewolf, and so on.</p><p>In how many different ways can she write her report, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 423, "OAPpl", "employees", "prizes", "employee", "prize",
+    "<p>A prize drawing is held at a small office party, and each of several prizes is awarded to one of the employees. (It is possible for multiple prizes to be awarded to the same employee.)</p><p>In how many different ways can the prizes be awarded, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 424, "PCO", "fishing spots", "fishermen", "spot", "fisherman",
+    "<p>Several fishermen go fishing in the same lake, and each of them chooses one of several spots at which to fish. (It is possible for more than one fisherman to choose the same spot.)</p><p>In how many different ways can the fishermen choose their spots, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 425, "OSS", "types of wine", "courses in the meal", "type of wine", "course",
+    "<p>A gourmet chef is preparing a fancy several-course meal. There are several types of wine available, and the chef needs to choose one wine to serve with each course. (It is possible for the same wine to be served with more than one course.)</p><p>In how many different ways can the wines be chosen, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 426, "OAPpl", "sons", "houses", "son", "house",
+    "<p>A wealthy old woman is writing her will. She owns several houses, and wishes to leave each house to one of her sons. (It is possible for her to leave more than one house to the same son.)</p><p>In how many different ways can she write this part of her will, if there are {0} {1} and {2} {3}?</p>" ),
+
+// test set 2
+
+// all of these problems were used in exp 6
+
+new Question( 527, "OAPlc", "crops", "fields", "crop", "field",
+    "<p>A farmer is planning what crops he will plant this year. He chooses one crop for each of several fields. (It is possible for multiple fields to receive the same crop.)</p><p>In how many different ways can the farmer plant his crops, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 528, "CAE", "categories", "weather events", "category", "event", 
+    "<p>A meteorologist must write a report classifying each extreme weather event which occurred in the past year into a category such as Hurricane, Tropical Storm, etc.</p><p>In how many different ways can he write his report, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 529, "OAPpl", "children", "provinces", "child", "province",
+    "<p>An aging king plans to divide his lands among his heirs. Each province of the kingdom will be assigned to one of his many children. (It is possible for multiple provinces to be assigned to the same child.)</p><p>In how many different ways can the provinces be assigned, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 530, "PCO", "treatments", "doctors", "treatment", "doctor",
+    "<p>There are several possible treatments for a certain rare disease. A patient with this disease consults several doctors, and each doctor recommends one of the possible treatments. (It is possible for more than one doctor to recommend the same treatment.)</p><p>In how many different ways can the doctors make their recommendations, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 531, "OSS", "colognes to choose from", "dates", "cologne", "date", 
+    "<p>Don Juan has one date with each of a merchant's daughters. For each date, he puts on a cologne he thinks that daughter will like. (It is possible for him to choose the same cologne for more than one date.)</p><p>In how many different ways can he choose colognes for his dates, if there are {0} {1} and {2} {3}?</p>" ),
+
+new Question( 532, "OAPpl", "detectives", "cases", "detective", "case", 
+    "<p>A police department receives several new cases in one day. Each new case is assigned to one of the detectives. (It is possible for multiple cases to be assigned to the same detective.)</p><p>In how many different ways can the cases be assigned, if there are {0} {1} and {2} {3}?</p>" )
+    
         ];
     
     return questions;
 
 }
 
-
-//////////////////////////////////
-// Non-experiment Content
-//////////////////////////////////
-
-var entrance_turk   = '\
-    <p>Thank you for your interest in our survey.</p> \
-    <p>In this task you will:</p> \
-    <ol> \
-        <li>Read a consent form and give your consent to participate in this study.</li> \
-        <li>Complete a survey in which you will learn some math and solve some problems. No advanced math is required.</li> \
-        <li>Answer a few background questions about yourself.</li> \
-    </ol> \
-    <p>Payment for the task is performance-based:</p> \
-    <ol> \
-        <li>Base payment is $0.50 (you get this regardless of performance).</li> \
-        <li>You get a bonus payment for each question you answer correctly above the minimum which you could get by just guessing.</li> \
-        <li>The maximum payment including bonus (if you get all the questions correct) is $1.30.</li> \
-        <li>90 minutes is allowed but 30 minutes is often enough time.</li> \
-    </ol> \
-    <p><b>PLEASE DO NOT ACCEPT THIS HIT</b> if you have completed another HIT with the name "Learn Some Math!" for this requester (Percepts Concepts). If you have, you will not be able to complete the HIT.</p> \
-    <p><b>DO NOT USE THE FORWARD, BACKWARD, OR REFRESH BUTTONS</b> on your browser while working on the HIT - if you do, all your work will be lost. Also, please make sure your browser has Javascript enabled - otherwise, the HIT will not work.</p> ';
-    
-var entrance_nonturk    = '\
-    <p>Thank you for participating in this study about mathematics learning!</p> \
-    <p><b>DO NOT USE THE FORWARD, BACKWARD, OR REFRESH BUTTONS</b> on your browser while working on this study - if you do, all your work will be lost.</p> \
-    <p>Click the button below when you are ready to begin.</p>';
-
-var nextpage_button = '<p><input id="nextPageButton" type="button" name="nextPageButton"></p> ';
-entrance_turk    += nextpage_button;
-entrance_nonturk += nextpage_button;
-
-var consent_form = '\
-<p style="text-align: center;">\
- <strong>INDIANA UNIVERSITY INFORMED CONSENT STATEMENT</strong></p>\
-<p style="text-align: center;">\
- <strong>Learning About Science</strong></p>\
-<p style="text-align: center;">\
- <span style="font-size:11px;">IRB Study #0801000097 (05-9550)</span></p>\
-<p style="text-align: center;">\
- <span style="font-size:11px;">Form date: December 28, 2012</span></p>\
-<p style="text-align: center;">\
- <span style="font-size:11px;"><strong>IRB Approval Date: </strong>Jan 4, 2013</span></p>\
-<p style="text-align: center;">\
- <span style="font-size:11px;"><strong>Expiration Date: </strong>Jan 3, 2015</span></p>\
-<p>\
- You are invited to participate in a research study of how people learn scientific principles. You were selected as a possible subject because you indicated that you wished to participate on this website. We ask that you read this form and ask any questions you may have before agreeing to be in the study.</p>\
-<p>\
- The study is being conducted by Dr. Robert Goldstone in the Department of Psychological and Brain Sciences.</p>\
-<p>\
- <strong>STUDY PURPOSE: </strong>Science education is vital for developing general critical thinking skills and preparation for a wide variety of careers. However, many students have great difficulty acquiring scientific knowledge, and have particular difficulty applying their knowledge to new cases. The purpose of this study is to better understand how people acquire scientific knowledge and use it in new situations.</p>\
-<p>\
- <strong>NUMBER OF PEOPLE TAKING PART IN THE STUDY: </strong>If you agree to participate, you will be one of approximately 6,000 subjects who will be participating in this research.</p>\
-<p>\
- <strong>PROCEDURES FOR THE STUDY: </strong>If you agree to be in the study, you will be presented with several straightforward tasks to complete. These tasks will include interacting with graphical simulations of physical systems, and reading and entering text information. Each task will be related to a meaningful scientific principle. The entire session should take approximately 55 minutes.  You may only participate in the experiment once.</p>\
-<p>\
- <strong>RISKS OF TAKING PART IN THE STUDY: </strong>There is the risk of loss of confidentiality.</p>\
-<p>\
- <strong>BENEFITS OF TAKING PART IN THE STUDY: </strong>An understanding of how individuals learn scientific principles can help us understand human learning, memory, and reasoning, and help educators to convey scientific information more effectively. You benefit from this experience because you learn something about how an experiment is designed and conducted, what issues are of interest to cognitive scientists, and how the mind acquires and uses scientific knowledge.</p>\
-<p>\
- <strong>ALTERNATIVES TO TAKING PART IN THE STUDY: </strong>Instead of being in the study, you have these options: Not being in the study.</p>\
-<p>\
- <strong>CONFIDENTIALITY</strong>: Efforts will be made to keep your personal information confidential. We cannot guarantee absolute confidentiality. Your personal information may be disclosed if required by law. Your identity will be held in confidence in reports in which the study may be published and in databases in which results may be stored.</p><p>Organizations that may inspect and/or copy your research records for quality assurance and data analysis include groups such as the study investigator and his/her research associates, the IU Institutional Review Board or its designees, and (as allowed by law) state or federal agencies, specifically the Office for Human Research Protections (OHRP).</p>\
-<p>\
- <strong>PAYMENT: </strong>For participating in this study, you will receive a small payment of $0.50.<br></p>\
-<p>\
- <strong>CONTACTS FOR QUESTIONS OR PROBLEMS: </strong>For questions about the study or a research-related injury, contact the researcher Dr. Robert Goldstone at 812-855-4853, or rgoldsto@indiana.edu.</p>\
-<p>\
- For questions about your rights as a research participant or to discuss problems, complaints or concerns about a research study, or to obtain information, or offer input, contact the IU Human Subjects office at (812) 856-4242 or by email at irb@iu.edu.</p>\
-<p>\
- <strong>VOLUNTARY NATURE OF STUDY: </strong>Taking part in this study is voluntary. You may choose not to take part or may leave the study at any time. Leaving the study will not result in any penalty or loss of benefits to which you are entitled. Your decision whether or not to participate in this study will not affect your current or future relations with the investigator(s).</p>\
-<p>\
- <strong>SUBJECT\'S CONSENT </strong></p>\
-<p>\
- By checking below, you acknowledge that you have read and understood the above information, and give your consent to participate in our internet-based study.</p>\
-<p><input id="consentBox" name="consentBox" type="checkbox" value="consentGiven">I Agree to take part in this study.</p>\
-<p>Print this page before you click the box above to begin the experiment.</p>';
-consent_form += nextpage_button;
-
-var debriefing  = '<p>The experiment in which you just participated explores the effectiveness of different methods of learning and teaching mathematics. A critical issue in mathematics education is how to promote "transfer," i.e. applying what one has learned to novel situations outside the classroom.</p>\
-<p>In principle, mathematical ideas are applicable to a wide range of problems in a variety of fields, making transfer particularly desirable. In practice, however, superficial differences between studied problems and newly encountered problems may conceal their shared mathematical structure, thus inhibiting transfer. A possible method of avoiding this difficulty would be to systematically vary the superficial characteristics of studied problems, while keeping their mathematical structure constant. Hopefully, this approach would encourage learners to focus on mathematical structure rather than superficial characteristics, thus leading to more transfer.</p>\
-<p>This experiment involved various combinatorics problems. All shared the same mathematical structure: that of a Sampling with Replacement problem. You received instruction in how to solve such problems, in the form of a series of worked examples. In these examples, some types of things, such as locations, either "switched roles" between different examples, or always played the same roles throughout. You were then tested on problems involving several new types of situation. We hypothesize that the "switched roles" examples will lead to better test performance than the "constant roles" examples.</p>\
-<p>Mathematics education in the USA is famously in need of reform. Inability to transfer knowledge learned to new problems is among the key issues to be resolved. We hope that our research will contribute to this reform by clarifying how the type of examples used to illustrate mathematical principles can affect the likelihood of successful knowledge transfer.</p>\
-<p>We greatly appreciate your help in this research, which would not be possible without your effort. If you have any questions, or would like a more complete debriefing, please contact David Braithwaite at dwbraith@indiana.edu.</p>';
-
-var exit_turk   = '\
-    <p>You have now completed the study. Thank you very much for your participation!</p> \
-    <p><b>Your HIT has NOT yet been submitted.</b> To submit the HIT, click the button at the bottom of this page.</p> \
-    <p>The following paragraphs explain the background and purpose of this study. You may read them or skip them as you please.</p>';
-exit_turk       += debriefing;
-exit_turk       += '<form id="exit_form" method="POST">\
-                    <input type="hidden" id="assignmentId" name="assignmentId" value="">\
-                    <input id="mTurkSubmitButton" type="submit" name="Submit" value="Submit">\
-                    </form>';
-
-var exit_nonturk = '\
-    <p>You have now completed the study. Thank you very much for your participation!</p>\
-    <p>The following paragraphs explain the background and purpose of this study. You are not required to read them if you do not want to.</p>';
-exit_nonturk    += debriefing;

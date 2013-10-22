@@ -27,9 +27,9 @@ if (!$result) {
 }
 
 // export to csv
-// $file   = 'data/'.$table.'_data.csv';
-// unlink( $file );
-// include 'mysql_to_csv.php';
-// exportMysqlToCsv($table,$file);
+$file   = 'data/'.$table.'_data.csv';
+unlink( $file );
+include 'mysql_to_csv.php';
+exportMysqlToCsv($table,$file);
 
 ?>
