@@ -1,57 +1,36 @@
-//////////////////////////////////////////////////////////////////////////////////////////
-// displayButtonChoice and getTrialSpecs
-// displayButtonChoice displays trial content and sets it to respond to user input
-// getTrialSpecs generates the content for displayButtonChoice
-//////////////////////////////////////////////////////////////////////////////////////////
-
-// displayButtonChoice
-// in target_div, displays a block of text contained in specs.text
-// followed by vertically laid-out answer buttons with content contained in specs.answers
-// when a button is pressed, if live is true, saves specs.data, response, and accuracy to data, then calls on_select
-function displayButtonChoice( target_div, live, on_select, specs, data ) {
-
-    // console.log( "content.js > displayTrial called. live: " + live );
-
-    // display trial content to target div
-    var content = specs.text;
-    for ( var i=0; i<specs.answers.length; i++ ) {
-        content += "<button id='button_" + i + "' type='button' class='trial_answer_button'>" + specs.answers[i] + "</button>";
-        // content += "<p><button id='button_" + i + "' type='button' class='trial_answer_button'>" + specs.answers[i] + "</button></p>";
-        if ( i<specs.answers.length-1 ) { content += "<br><br>"; }
-    }
-    target_div.html( content );
-
-    // set answer buttons to react appropriately when clicked
-    if ( live ) {
-        for ( var i=0; i<specs.answers.length; i++ ) {
-            $('#button_'+i).click( function() {
-                // highlight clicked button and un-highlight all others
-                for ( var j=0; j<specs.answers.length; j++ ) {
-                    $('#button_'+j).removeClass('selected');
-                }
-                $(this).addClass('selected');
-                // record response and accuracy
-                data.response = Number( $(this).attr('id').slice(7) );
-                data.accuracy = Number( data.response==data.key );
-                // console.log( "displayButtonChoice > response logged: " + data.response );
-                // call on_select (this can e.g. activate an external submit button)
-                on_select();
-                } );
-        }
-    } else {
-        for ( var i=0; i<specs.answers.length; i++ ) {
-            $('#button_'+i).attr( 'disabled', 'disabled' );
-        }
-    }        
+// runExperiment:
+// create an array of trial specifications, then run it on jspsych using the button_choice plugin
+function runExperiment( conds_params, target, callback, mode, verbose ) {
+    mode                = (mode==undefined) ? "forced" : mode;
+    verbose             = (verbose==undefined) ? false : verbose;
+    var exp_struct      = makeExpStruct( conds_params, mode, verbose );
+    if ( verbose ) { console.log( "experiment.js > runExperiment calling jsPsych.init." ); }
+    jsPsych.init( target,
+        { "experiment_structure": exp_struct,
+          "plugins": [ { "type": "button_choice", "src": "button_choice.js" } ],
+          "finish": callback } );
 }
 
+// makeExpStruct:
+// create a block specification for the jspsych button_choice plugin
+function makeExpStruct( conds_params, mode, verbose ) {
+    var specs = new Array( conds_params.length );
+    var condition, parameters;
+    for ( var i=0; i<specs.length; i++ ) {
+        condition   = conds_params[i]["condition"];
+        parameters  = conds_params[i]["parameters"];
+        specs[i]    = getTrialSpecs( condition, parameters );
+        specs[i].data = $.extend( {}, { "condition": condition }, parameters, specs[i].data );
+    }
+    var exp_struct  = [ { "type": "button_choice", "mode": mode, "verbose": verbose, "ITI": 500, "specs": specs } ];
+    // TBD: make ITI dependent on mode
+    if ( verbose ) { console.log( "experiment.js > makeExpStruct > generated exp_struct with " + specs.length + " trials." ); }
+    return( exp_struct );
+}
 
-// getTrialSpecs
-// creates content for displayButtonChoice, including the following:
-// text: a block of text which contains the text from two question objects in parallel columns,
-//  followed by a prompt to indicate how the terms (nouns) in one question correspond to those in the other
-// answers: two descriptions of the two possible ways in which the elements in one question object could correspond to those in the other
-// data: information about the question objects, together with an answer key
+// getTrialSpecs:
+// create a list of trial specifications for the jspsych button_choice plugin
+// each trial specification should include properties text, answers, key, and data
 function getTrialSpecs( condition, parameters ) {
 
     //// use condition to determine which question objects will serve as the basis for the trial
@@ -112,12 +91,13 @@ function getTrialSpecs( condition, parameters ) {
         var ans_incorrect   = createAnswer( questions[0].exp_noun, questions[1].base_noun, questions[0].base_noun, questions[1].exp_noun );
     }
     
-    // use parameters.answer_order to put the answers in order
+    // use parameters.answer_order to put the answers in order, and record answer key
     if ( parameters.answer_order==0 ) {
         var answers = [ ans_correct, ans_incorrect ];
     } else if ( parameters.answer_order==1 ) {
         var answers = [ ans_incorrect, ans_correct ];
     }
+    var key = parameters.answer_order;
     
     //// finally create a data object for the trial and return
     var data = {
@@ -128,7 +108,7 @@ function getTrialSpecs( condition, parameters ) {
         "key": parameters.answer_order
         };
 
-    return { "text": text, "answers": answers, "data": data };
+    return { "text": text, "answers": answers, "key": key, "data": data };
         
 }
 
@@ -142,6 +122,7 @@ var getPairIdxs = function( n ) {
     // console.log( "getPairIdxs returned list of length " + result.length );
     return result;
 }
+
 
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -423,4 +404,70 @@ new Question( 532, "OAPpl", "detectives", "cases", "detective", "case",
     return questions;
 
 }
+
+
+
+
+function OLDrunExperiment( condition ) {
+
+    // convert condition number into factor assignments
+    var factors         = conditionToFactors( condition );
+    var condFrame       = factors["condFrame"];     // whether verbal, graphical, or no representational frame is given for the underlying structure during training
+    var condVariation   = factors["condVariation"]; // whether the training examples are varied or nonvaried
+    var condVersion     = factors["condVersion"];   // whether the first training example is OAPlc or ROAPlc schema
+    var condTestSeq     = factors["condTestSeq"];   // which test problem set is used as pretest and which as posttest
+    console.log( "experiment.html > runExperiment > factors assigned. condFrame: " + condFrame + "; condVariation: " + condVariation + "; condVersion: " + condVersion + "; condTestSeq: " + condTestSeq );
+    
+    // create experiment structure
+    var exp_struct  = makeExpStruct( condFrame, condVariation, condVersion, condTestSeq, sections, mode );
+    console.log( "experiment.html > runExperiment > exp_struct length " + exp_struct.length );
+    
+    // record start time
+    var start_time          = new Date();
+    var start_time_txt      = dateToString( start_time );
+    console.log( "experiment.html > runExperiment > starting experiment at " + start_time_txt );
+
+    // run the experiment
+    jsPsych.init($('#target'), {
+        "experiment_structure": exp_struct,
+		"plugins": [ // TBD
+			{"type": "survey", "src": "jspsych-survey.js"},
+            {"type": "scmvar_test", "src": "jspsych-scmvar.js"},
+            {"type": "scmvar_training", "src": "jspsych-scmvar.js"}
+		],
+        "finish": function( data ) {
+            // record end time
+            var end_time        = new Date();
+            var end_time_txt    = dateToString( end_time );
+            var total_time_min  = (( end_time.getTime() - start_time.getTime() ) / ( 60 * 1000 )).toFixed(2);
+            var subj_data       = { "subjid": subjid, "testing": testing.toString(), "mode": mode,
+                                    "condition": condition, "condFrame": condFrame, "condVariation": condVariation, "condVersion": condVersion, "condTestSeq": condTestSeq,
+                                    "start": start_time_txt, "end": end_time_txt, "time": Number(total_time_min) };
+            var final_data      = prependData( subj_data, data );
+            console.log( "experiment.html > runExperiment jsPsych run complete. final data follows." );
+            console.log( JSON.stringify(final_data) );
+            if ( offline ) {
+                console.log( "experiment.html > runExperiment in offline mode, skipping data submission." );
+                showExitPage( JSON.stringify(final_data) );
+            } else {
+                $.ajax( { type: 'post',
+                          cache: false,
+                          url: 'submit_data.php',
+                          data: { 
+                            'table': table,
+                            'json': JSON.stringify(final_data) },
+                          success: function(data) {
+                            console.log( "experiment.html > runExperiment: submit_data succeeded." );
+                            showExitPage( final_data );
+                          },
+                          error: function(data) {
+                            console.log( "experiment.html > runExperiment: submit_data failed with error " + data.statusText );
+                            showExitPage( final_data );
+                          }
+                        } );
+            }
+        } } ) ;
+
+}
+
 
