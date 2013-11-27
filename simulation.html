@@ -25,7 +25,7 @@
 
 <script type="text/javascript">
 
-var table = 'scmvar_07_turk_testing';
+var table = 'scmvar_07b_testing';
 
 function doSubject( subjid, callback ) {
     $.ajax({ type: 'post', cache: false, url: 'assign_cond_subcond.php',
@@ -45,7 +45,7 @@ function doRepetition( subjids, callback ) {
     var iterate = function( assignments ) {
         // add subject data to list and increment subject index
         for ( var i=0; i<assignments.length; i++ ) {
-            subj_data.push( $.extend( { "subjid": subjids[subj_idx] }, assignments[i] ) )
+            subj_data.push( $.extend( { "subjid": subjids[subj_idx] }, assignments[i], { "approve": 1 } ) );
         }
         subj_idx++;
         // if there are subjects remaining, do another, otherwise return the result of the repetition

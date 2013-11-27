@@ -1,11 +1,11 @@
 <?php
 
 // name of data table, number of conditions and subconditions, and subject ID should be passed in by ajax call
-$table          = $_POST['table'];
-$subjid         = $_POST['subjid'];
-$numcond        = $_POST['numcond'];
-$numsubcond     = $_POST['numsubcond'];
-$trialspersubj  = $_POST['trialspersubj'];
+$table          = 'scmvar_07_turk_testing';
+$subjid         = 'subj_100074810';
+$numcond        = 2556;
+$numsubcond     = 8;
+$trialspersubj  = 10;
 
 // connect to the database and create table if it doesn't exist
 include('database_connect.php');
@@ -35,6 +35,48 @@ function scaleWeights( $weights ) {
     return $scaledWeights;
 }
 
+/*
+// create arrays to hold # complete per condition total and for this participant
+$completes_condition_total = array_fill( 0, $numcond, 0 );
+$completes_condition_subj  = array_fill( 0, $numcond, 0 );
+
+// query database to get actual number complete per condition
+$query      = 'SELECT `condition`, COUNT(DISTINCT id) FROM '.mysql_real_escape_string($table).' GROUP BY `condition`';
+$result     = mysql_query($query);
+while ( $row = mysql_fetch_array($result) ) {
+    $completes_condition_total[intval($row['condition'])] = intval($row['COUNT(DISTINCT id)']);
+}
+
+// calculate weight for each condition as (max completes)-(completes for this condition)
+$weights_condition = array();
+$max_completes = max( $completes_condition_total );
+for ( $i=0; $i<$numcond; $i++ ) {
+    $weights_condition[$i] = $max_completes - $completes_condition_total[$i];
+}
+
+// exponentially scale weights
+$scaled_weights_condition = scaleWeights( $weights_condition );
+
+// query database to get number complete per condition for THIS subject
+$query      = 'SELECT `condition`, COUNT(DISTINCT id) FROM '.mysql_real_escape_string($table).' WHERE `subjid`="'. $subjid . '" GROUP BY `condition`';
+$result     = mysql_query( $query );
+while ( $row = mysql_fetch_array($result) ) {
+    $completes_condition_subj[intval($row['condition'])] = intval($row['COUNT(DISTINCT id)']);
+}
+
+// change weight to 0 for any condition already completed by this subject
+for ( $i=0; $i<$numcond; $i++ ) {
+    if ( $completes_condition_subj[$i] > 0 ) {
+        $scaled_weights_condition[$i] = 0;
+    }
+}
+
+// print number of completes per condition for this subject
+print( "<pre>" );
+print_r( $scaled_weights_condition );
+print( "</pre>" );
+*/
+
 // assignCondSubcond assigns a condition and subcondition to a given subject
 // conditions are assigned from among those not done by the subject
 // (IMPORTANT! must guarantee that $trialspersubj <= the number of conditions not done by the subject)
@@ -49,7 +91,7 @@ function assignCondSubcond( $subjid ) {
     $completes_condition_subj  = array_fill( 0, $numcond, 0 );
 
     // query database to get actual number complete per condition
-    $query      = 'SELECT `condition`, COUNT(DISTINCT id) FROM '.mysql_real_escape_string($table).' WHERE `approve`=1 GROUP BY `condition`';
+    $query      = 'SELECT `condition`, COUNT(DISTINCT id) FROM '.mysql_real_escape_string($table).' GROUP BY `condition`';
     $result     = mysql_query($query);
     while ( $row = mysql_fetch_array($result) ) {
         $completes_condition_total[intval($row['condition'])] = intval($row['COUNT(DISTINCT id)']);
@@ -66,7 +108,7 @@ function assignCondSubcond( $subjid ) {
     $scaled_weights_condition = scaleWeights( $weights_condition );
 
     // query database to get number complete per condition for THIS subject
-    $query      = 'SELECT `condition`, COUNT(DISTINCT id) FROM '.mysql_real_escape_string($table).' WHERE (`approve`=1) & (`subjid`="'. $subjid . '") GROUP BY `condition`';
+    $query      = 'SELECT `condition`, COUNT(DISTINCT id) FROM '.mysql_real_escape_string($table).' WHERE `subjid`="'. $subjid . '" GROUP BY `condition`';
     $result     = mysql_query( $query );
     while ( $row = mysql_fetch_array($result) ) {
         $completes_condition_subj[intval($row['condition'])] = intval($row['COUNT(DISTINCT id)']);
@@ -131,9 +173,28 @@ function assignCondSubcondArray( $subjid ) {
     return $cond_subcond_array;
 }
 
+// create arrays to hold # complete per condition total and for this participant
+$completes_condition_subj  = array_fill( 0, $numcond, 0 );
+$query      = 'SELECT `condition`, COUNT(DISTINCT id) FROM '.mysql_real_escape_string($table).' WHERE `subjid`="'. $subjid . '" GROUP BY `condition`';
+$result     = mysql_query( $query );
+while ( $row = mysql_fetch_array($result) ) {
+    $completes_condition_subj[intval($row['condition'])] = intval($row['COUNT(DISTINCT id)']);
+}
+
+$cond_subcond = assignCondSubcond( $subjid );
+
+$cond = $cond_subcond['condition'];
+
+$return_arr = $cond_subcond;
+
+$return_arr['completed'] = $completes_condition_subj[$cond];
+
+echo json_encode( $return_arr );
+
+/*
 
 $cond_subcond_array = assignCondSubcondArray( $subjid );
 
 echo json_encode( $cond_subcond_array );
-
+*/
 ?>

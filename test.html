@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>SCMVAR Experiment 7b</title>
+
+    <script type="text/javascript"          src="jquery-1.8.3.min.js"></script>
+    <script type="text/javascript"          src="utility.js"></script>
+    <script type="text/javascript"          src="jspsych-revised.js"></script>
+    <script type="text/javascript"          src="button_choice.js"></script>
+    <script type="text/javascript"          src="experiment.js"></script>
+    <link type="text/css" rel="stylesheet"  href="styles.css">
+
+</head>
+
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<!-- disable the following when out of development: -->
+<META HTTP-EQUIV="Pragma" CONTENT="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="-1">
+
+<body>
+	<div id="target"></div>
+</body>
+
+<script type="text/javascript">
+
+var iterate = function(i) {
+    if ( i<100000 ) {
+        $.ajax({ type: 'post', cache: false, url: 'test.php',
+            data: { 'table': 'scmvar_07_turk_testing', 'subjid': 'subj_100074810', 'numcond': 2556, 'numsubcond': 8, 'trialspersubj': 10 },
+            success: function(data) {
+                var x = $.parseJSON( data );
+                if ( x['completed']>0 ) {
+                    $('#target').append( "<br>" + data + "<br>" );
+                } else {
+//                    $('#target').append( "no " );
+                }
+                iterate( i+1 );
+            },
+            error: function(data) {
+                $('#target').append( "Failure" );
+            }
+            });
+    } else {
+        $('#target').append( "<p>Done</p>" );
+    }
+}
+
+iterate(0);
+
+</script>
+</html>

@@ -1,9 +1,14 @@
 // runExperiment:
 // create an array of trial specifications, then run it on jspsych using the button_choice plugin
-function runExperiment( conds_params, target, callback, mode, verbose ) {
+function runExperiment( conds_subconds, target, callback, mode, verbose ) {
+    // convert conds_subconds array into array of trial parameters
+    var parameters      = condsSubcondsToParameters( conds_subconds );
+    // assign default values to mode and verbose, if not already assigned
     mode                = (mode==undefined) ? "forced" : mode;
     verbose             = (verbose==undefined) ? false : verbose;
-    var exp_struct      = makeExpStruct( conds_params, mode, verbose );
+    // create experiment structure object
+    var exp_struct      = makeExpStruct( parameters, mode, verbose );
+    // run jspsych on the created experiment structure
     if ( verbose ) { console.log( "experiment.js > runExperiment calling jsPsych.init." ); }
     jsPsych.init( target,
         { "experiment_structure": exp_struct,
@@ -11,16 +16,75 @@ function runExperiment( conds_params, target, callback, mode, verbose ) {
           "finish": callback } );
 }
 
+// condsSubcondsToParameters:
+// convert an array of conditions & subconditions into an array of trial parameters
+// (conditions & subconditions are counterbalanced, so their assignment needs DB access and so is handled outside of this script;
+// other parameters are generated either based on cond/subcond or randomly within this script)
+function condsSubcondsToParameters( conds_subconds ) {
+    var parameters = new Array( conds_subconds.length );
+    for ( var i=0; i<parameters.length; i++ ) {
+        parameters[i]   = condSubcondToParameters( conds_subconds[i] );
+    }
+    return parameters;
+}
+
+// condSubcondToParamters:
+// convert one condition/subcondition pair into a set of parameters for one trial
+function condSubcondToParameters( cond_subcond ) {
+    var params = {};
+    params[ 'condition'      ]  = cond_subcond['condition'];
+    params[ 'subcondition'   ]  = cond_subcond['subcondition'];
+    // use subcondition to determine values for counterbalanced params
+    params[ 'question_order' ]  = [ 0, 0, 0, 0, 1, 1, 1, 1 ][ params.subcondition ];
+    params[ 'answer_order'   ]  = [ 0, 0, 1, 1, 0, 0, 1, 1 ][ params.subcondition ];
+    params[ 'term_consistency' ] = [ 0, 1, 0, 1, 0, 1, 0, 1 ][ params.subcondition ];
+    // randomly select values for randomized params
+    params[ 'q1_term_order'  ]  = Math.floor( Math.random()*2 );
+    params[ 'q2_term_order'  ]  = ( 1 + params[ 'term_consistency' ] + params[ 'q1_term_order'  ] ) % 2;
+    var numbers;
+    numbers = generateNumbers();
+    params[ 'q1_base_num'    ]  = numbers[0];
+    params[ 'q1_exp_num'     ]  = numbers[1];
+    numbers = generateNumbers();
+    params[ 'q2_base_num'    ]  = numbers[0];
+    params[ 'q2_exp_num'     ]  = numbers[1];
+    return( params );
+}
+
+// generateNumbers:
+//  returns a pair of numbers in [3,9] both of which are different from each other & those returned the last time it was called
+var prev_numbers = [ 0, 0 ];
+function generateNumbers() {
+    // randIntExclude: return an integer in [m,n] but not in l
+    function randIntExclude(m,n,l) {
+        var result = m + Math.floor( Math.random() * (n-m+1) )
+        var okay = true;
+        for ( var i=0; i<l.length; i++ ) {
+            if ( result == l[i] ) {
+                okay = false;
+            }
+        }
+        if ( okay ) {
+            return result;
+        } else {
+            return randIntExclude(m,n,l);
+        }
+    }
+
+    var new_numbers = [ 0, 0 ];
+    new_numbers[0]  = randIntExclude( 3, 9, prev_numbers );
+    new_numbers[1]  = randIntExclude( 3, 9, prev_numbers.concat( [ new_numbers[0] ] ) );
+    prev_numbers    = new_numbers;
+    return prev_numbers;
+}
+
 // makeExpStruct:
 // create a block specification for the jspsych button_choice plugin
-function makeExpStruct( conds_params, mode, verbose ) {
-    var specs = new Array( conds_params.length );
-    var condition, parameters;
+function makeExpStruct( parameters, mode, verbose ) {
+    var specs = new Array( parameters.length );
     for ( var i=0; i<specs.length; i++ ) {
-        condition   = conds_params[i]["condition"];
-        parameters  = conds_params[i]["parameters"];
-        specs[i]    = getTrialSpecs( condition, parameters );
-        specs[i].data = $.extend( {}, { "condition": condition }, parameters, specs[i].data );
+        specs[i]        = getTrialSpecs( parameters[i] );
+        specs[i].data   = $.extend( {}, parameters[i], specs[i].data );
     }
     var exp_struct  = [ { "type": "button_choice", "mode": mode, "verbose": verbose, "ITI": 500, "specs": specs } ];
     // TBD: make ITI dependent on mode
@@ -31,12 +95,12 @@ function makeExpStruct( conds_params, mode, verbose ) {
 // getTrialSpecs:
 // create a list of trial specifications for the jspsych button_choice plugin
 // each trial specification should include properties text, answers, key, and data
-function getTrialSpecs( condition, parameters ) {
+function getTrialSpecs( parameters ) {
 
     //// use condition to determine which question objects will serve as the basis for the trial
     
     var question_list   = getQuestionList();
-    var question_idxs   = getPairIdxs( question_list.length )[ condition ];
+    var question_idxs   = getPairIdxs( question_list.length )[ parameters.condition ];
     var question_pair   = [ question_list[question_idxs[0]], question_list[question_idxs[1]] ];
     
     //// First create the text block which will appear in the trial
