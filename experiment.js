@@ -86,7 +86,7 @@ function makeExpStruct( parameters, mode, verbose ) {
         specs[i]        = getTrialSpecs( parameters[i] );
         specs[i].data   = $.extend( {}, parameters[i], specs[i].data );
     }
-    var exp_struct  = [ { "type": "button_choice", "mode": mode, "verbose": verbose, "ITI": 500, "specs": specs } ];
+    var exp_struct  = [ { "type": "button_choice", "mode": mode, "verbose": verbose, "ITI": 500, "progress": true, "specs": specs } ];
     // TBD: make ITI dependent on mode
     if ( verbose ) { console.log( "experiment.js > makeExpStruct > generated exp_struct with " + specs.length + " trials." ); }
     return( exp_struct );

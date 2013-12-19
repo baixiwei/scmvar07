@@ -2,22 +2,8 @@
 <html>
 
 <head>
-
-    <title>SCMVAR Experiment 7b</title>
-
     <script type="text/javascript"          src="jquery-1.8.3.min.js"></script>
-    <script type="text/javascript"          src="utility.js"></script>
-    <script type="text/javascript"          src="jspsych-revised.js"></script>
-    <script type="text/javascript"          src="button_choice.js"></script>
-    <script type="text/javascript"          src="experiment.js"></script>
-    <link type="text/css" rel="stylesheet"  href="styles.css">
-
 </head>
-
-<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
-<!-- disable the following when out of development: -->
-<META HTTP-EQUIV="Pragma" CONTENT="no-cache">
-<META HTTP-EQUIV="Expires" CONTENT="-1">
 
 <body>
 	<div id="target"></div>
@@ -25,93 +11,127 @@
 
 <script type="text/javascript">
 
-var table = 'scmvar_07b_testing';
+var table   = 'test_table';
+var numcond = 2556;
+var numsubcond = 8;
+var trialspersubj = 10;
 
-function doSubject( subjid, callback ) {
+function assignConditions( subjids ) {
+    var i=0, subjid, assignments=[];
+    function iter() {
+        if ( i<subjids.length ) {
+            subjid = subjids[i];
+            i++;
+            $.ajax({ type: 'post', cache: false, url: 'assign_cond_subcond.php',
+                data: { 'table': table, 'subjid': subjid, 'numcond': numcond, 'numsubcond': numsubcond, 'trialspersubj': trialspersubj },
+                success: function( result ) {
+                    assignments.push( $.parseJSON( result ) );
+                    iter();
+                },
+                error: function( errdata ) {
+                    $('#target').html( "assignCondition failed" );
+                }
+                });
+        } else {
+            runExperiment( subjids, assignments );
+        }
+    }
+    iter();
+}
+
+/*
+function assignConditions() {
     $.ajax({ type: 'post', cache: false, url: 'assign_cond_subcond.php',
-        data: { 'table': table, 'subjid': subjid, 'numcond': 2556, 'numsubcond': 8, 'trialspersubj': 10 },
-        success: function(data) {
-            callback( $.parseJSON( data ) );
+        data: { 'table': table, 'subjid': subjid, 'numcond': numcond, 'numsubcond': numsubcond, 'trialspersubj': trialspersubj },
+        success: function( assignments ) {
+            runExperiment( $.parseJSON(assignments) );
         },
-        error: function(data) {
-            $('#target').html( "Failure" );
+        error: function( errdata ) {
+            $('#target').html( "assignCondition failed" );
         }
         });
 }
+*/
 
-function doRepetition( subjids, callback ) {
-    var subj_data   = [];
-    var subj_idx    = 0;
-    var iterate = function( assignments ) {
-        // add subject data to list and increment subject index
-        for ( var i=0; i<assignments.length; i++ ) {
-            subj_data.push( $.extend( { "subjid": subjids[subj_idx] }, assignments[i], { "approve": 1 } ) );
-        }
-        subj_idx++;
-        // if there are subjects remaining, do another, otherwise return the result of the repetition
-        if ( subj_idx<subjids.length ) {
-            doSubject( subjids[subj_idx], iterate );
-        } else {
-            callback( subj_data );
+function runExperiment( subjids, assignments ) {
+    var data_block = [];
+    for ( var i=0; i<subjids.length; i++ ) {
+        for ( var j=0; j<assignments[i].length; j++ ) {
+            data_block.push( $.extend( { 'subjid': subjids[i], 'approve': 1 }, assignments[i][j] ) )
         }
     }
-    doSubject( subjids, iterate );
+    var final_data = JSON.stringify( [ data_block ] );
+    saveData( final_data );
 }
 
-function doRound( num_subjs, num_repetitions, callback ) {
-    var subjids = [];
-    for ( var i=0; i<num_subjs; i++ ) {
-        subjids.push( "subj_" + Math.floor( Math.random()*1000000000 ) );
+/*
+function runExperiment( assignments ) {
+    var data_block = [];
+    for ( var i=0; i<assignments.length; i++ ) {
+        data_block.push( $.extend( { 'subjid': subjid, 'approve': 1 }, assignments[i] ) )
     }
-    var rep_idx = 0;
-    var iterate = function( subj_data ) {
-        // record data to database
-        $.ajax( { type: 'post',
-                  cache: false,
-                  url: 'submit_data.php',
-                  data: { 
-                    'table': table,
-                    'json': JSON.stringify([subj_data]) },
-                  success: function(data) {
-                    // if there are repetitions remaining, do another, otherwise callback
-                    rep_idx++;
-                    if ( rep_idx<num_repetitions ) {
-                        doRepetition( subjids, iterate );
-                    } else {
-                        callback();
-                    }
-                  },
-                  error: function(data) {
-                    console.log( "doRound failed with error " + data.statusText );
-                  }
-                } );
-        
-    }
-    doRepetition( subjids, iterate );
+    var final_data = JSON.stringify( [ data_block ] );
+    saveData( final_data );
 }
+*/
 
-function doSimulation( num_rounds, num_subjs, num_repetitions ) {
-    var i=0;
-    var iterate = function() {
-        i++;
-        if ( i<num_rounds ) {
-            doRound( num_subjs, num_repetitions, iterate );
-        } else {
-            $('#target').append( "Finished simulation." );
+function saveData( final_data ) {
+    $.ajax( { type: 'post',
+        cache: false,
+        url: 'submit_data.php',
+        data: { 'table': table, 'json': final_data },
+        success: iterateSimulation,
+        error: function( errdata ) {
+            $('#target').html( "saveData failed. " + errdata );
         }
-    }
-    doRound( num_subjs, num_repetitions, iterate );
+        } );
 }
 
-// Let's say we want 16 completes per condition, i.e. 40,896 completes
-// Let's assume average 100 completes per subject, i.e. 10 repetitions @ 10 trials per repetition
-// Let's assume 10 subjects working simultaneously
-// That means each round we finish 10 subjects * 100 completes per subject = 1000 completes
-// So at a minimum we need 40.896 rounds.
-// Let's assume we need 5% overkill - that's about 43 rounds.
-// Here we go:
+var nRounds=43, nReps=10;
+var nSubj=10, subjids=new Array( nSubj );
+var simIdx=0;
+function iterateSimulation() {
+    if ( simIdx>=(nRounds*nReps) ) {
+        $('#target').append( "Simulation finished" );
+    } else if ( simIdx%nReps==0 ) {
+        // new round, generate new set of subjects
+        $('#target').append( "Starting round " + simIdx/nReps + "<br>" );
+        simIdx++;
+        for ( var i=0; i<nSubj; i++ ) {
+            subjids[i] = "subj_" + Math.floor( Math.random()*1000000000000000 );
+        }
+        assignConditions( subjids );
+    } else {
+        // new repetition with existing set of subjects
+        // $('#target').append( "Starting rep " + simIdx%nReps + "<br>" );
+        simIdx++;
+        assignConditions( subjids );
+    }
+}
 
-doSimulation( 43, 10, 10 );
+/*
+var nRounds=1, nReps=100;
+var subjid;
+var simIdx=0;
+function iterateSimulation() {
+    if ( simIdx>=(nRounds*nReps) ) {
+        $('#target').append( "Simulation finished" );
+    } else if ( simIdx%nReps==0 ) {
+        // new round, generate new set of subjects
+        $('#target').append( "Starting round " + simIdx/nReps + "<br>" );
+        simIdx++;
+        subjid = "subj_" + Math.floor( Math.random()*1000000000000000 );
+        assignConditions();
+    } else {
+        // new repetition with existing set of subjects
+        $('#target').append( "Starting rep " + simIdx%nReps + "<br>" );
+        simIdx++;
+        assignConditions();
+    }
+}
+*/
+
+iterateSimulation();
 
 </script>
 </html>

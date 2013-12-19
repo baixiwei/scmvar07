@@ -1,3 +1,17 @@
+// createProgressBar
+//  creates the HTML for a row of stars indicating # complete out of # total,
+//  with width equal to that of the div with id target - 100
+function createProgressBar( complete, total ) {
+    var width   = $('#target').width()-150;
+    var height  = 10; 
+    var padding = 3;
+    var content = "<table><tr><td style='vertical-align:middle; width: "+100+"px'>Your progress:  </td><td>";
+    content     += "<div style='background-color: gray; border-radius: "+((height/2)+padding)+"px; padding: "+padding+"px; width: "+width+"px'>";
+    content     += "<div style='background-color: #00FF99; width: "+(Math.floor(100*complete/total))+"%; height: "+height+"px; border-radius: "+(height/2)+"px'>";
+    content     += "</div></div></td></tr></table><br><br>";
+    return content;
+}
+
 // button_choice:
 // present a question and wait for participant to click one of two buttons
 ( function ( $ ) {
@@ -14,6 +28,7 @@
                 trials[i]["mode"]           = params.mode;
                 trials[i]["verbose"]        = params.verbose;
                 trials[i]["ITI"]            = params.ITI;
+                trials[i]["progress"]       = (params.progress===undefined) ? false : params.progress;
                 trials[i]["text"]           = params.specs[i]["text"];
                 trials[i]["answers"]        = params.specs[i]["answers"];
                 trials[i]["key"]            = params.specs[i]["key"];
@@ -25,7 +40,12 @@
         plugin.trial = function( $this, block, trial, part ) {
 
             // display trial content to target div
-            var content = trial.text;
+            var content = "";
+            if ( trial.progress ) {
+                console.log( "data to progressbar: " + block.trial_idx + "; " + block.num_trials );
+                content += createProgressBar( block.trial_idx, block.num_trials );
+            }
+            content += trial.text;
             for ( var i=0; i<trial.answers.length; i++ ) {
                 content += "<button id='button_" + i + "' type='button' class='button_choice_button'>" + trial.answers[i] + "</button>";
                 if ( i<trial.answers.length-1 ) { content += "<br><br>"; }

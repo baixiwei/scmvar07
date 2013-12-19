@@ -45,15 +45,16 @@ function setGlobalVars() {
     turk        = ( gup( "assignmentId" ) != "" );
     accepted    = turk ? ( gup( "assignmentId" )!="ASSIGNMENT_ID_NOT_AVAILABLE" ) : true;
     sandbox     = turk ? ( window.location.href.indexOf( "sandbox" ) != -1 ) : false;
-    subjid      = turk ? workerId : ( "NONTURK" + Math.floor(Math.random()*1000000000) );
+    subjid      = turk ? gup( "workerId" ) : ( "NONTURK" + Math.floor(Math.random()*1000000000) );
     if ( turk ) {
         hitId           = gup( "hitId" );
         assignmentId    = gup( "assignmentId" );
         workerId        = gup( "workerId" );
         turkSubmitTo    = gup( "turkSubmitTo" );
+        console.log( "index.html > setGlobalVars. hitId: " + hitId + "; assignmentId: " + assignmentId + "; workerId: " + workerId + "; turkSubmitTo: " + turkSubmitTo );
     }
 
-    if ( verbose ) { console.log( "index.html > setGlobalVars. testing: " + testing + "; offline: " + offline + "; mode: " + mode + "; turk: " + turk + "; accepted: " + accepted + "; sandbox: " + "; subjid: " + subjid ); }
+    if ( verbose ) { console.log( "index.html > setGlobalVars. testing: " + testing + "; offline: " + offline + "; mode: " + mode + "; turk: " + turk + "; accepted: " + accepted + "; sandbox: " + sandbox + "; subjid: " + subjid ); }
 
     table   = "scmvar_07b";
     if ( turk ) { table += "_turk"; }
@@ -76,12 +77,12 @@ function showEntrancePage() {
         <p>In this task you will:</p>\
         <ol> \
             <li>Read 10 pairs of math story problems like those in the qualification test.</li> \
-            <li>For each pair, choose between two options for how the things in one problem correspond to those in the other.</li> \
+            <li>For each pair of problems, choose between two ways of matching things in one problem to those in the other problem.</li> \
             <li>You do NOT need to solve the problems. No special math knowledge is needed.</li>\
-            <li>One assignment typically takes about 5 minutes.</li>\
+            <li>One assignment usually takes about 5 minutes.</li>\
         </ol> \
         <p>You are not eligible for this HIT if you have worked on a different HIT called "Matching Math Problems" or "Learn Some Math!" for the same requester. But you <b>are</b> allowed to do multiple assignments for <b>this</b> HIT.</p>\
-        <p>Your work may be rejected if your accuracy is below 50%, because 50% could be achieved by randomly guessing.</p>\
+        <p>To get paid, you must be more accurate than what could be achieved by randomly guessing.</p>\
         <p>Finally, <b>DO NOT USE THE FORWARD, BACKWARD, OR REFRESH BUTTONS</b> on your browser while working on the HIT - if you do, all your work will be lost.</p>';
     var button = '<p><input id="nextPageButton" type="button" name="nextPageButton"></p> ';
     $('#target').html( text + button );
@@ -122,7 +123,7 @@ function checkExclusion() {
 function assignCondition() {
     var numcond     = 2556;
     var numsubcond  = 8;
-    var numtrials   = 2;    // change to 10 before going live
+    var numtrials   = 10;
     if ( offline ) {
         var conds_subconds  = new Array( numtrials );
         var condition, subcondition;
@@ -163,9 +164,10 @@ function runExperimentWrapper( conds_subconds ) {
         for ( var trial=0; trial<data[0].length; trial++ ) {
             total_correct += Number(data[0][trial].accuracy);
         }
-        var approve         = Number((total_correct>=Math.floor(conds_subconds.length/2)));
+        var approve         = Number((total_correct>Math.floor(conds_subconds.length/2)));
         var subj_data       = {
             "subjid": subjid, "turk": turk.toString(), "sandbox": sandbox.toString(),
+            "hitId": hitId, "workerId": workerId, "assignmentId": assignmentId,
             "start_time": start_time_txt, "end_time": end_time_txt, "total_time": total_time,
             "total_correct": total_correct, "approve": approve };
         var final_data      = prependData( subj_data, data );
@@ -239,9 +241,9 @@ function showExitPage( final_data, turk_info ) {
                 $('#'+key).val( turk_info[key] );
             }
             if ( sandbox ) {
-                $("#exit_form").attr( "action", "http://workersandbox.mturk.com/mturk/externalSubmit" );
+                $("#exit_form").attr( "action", "https://workersandbox.mturk.com/mturk/externalSubmit" );
             } else {
-                $("#exit_form").attr( "action", "http://www.mturk.com/mturk/externalSubmit" );
+                $("#exit_form").attr( "action", "https://www.mturk.com/mturk/externalSubmit" );
             }
         }
     }

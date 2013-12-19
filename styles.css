@@ -38,7 +38,7 @@ Everything below target is contained inside target and so should be <= in size. 
     margin-left:auto; 
     margin-right:auto;
     font-family: "Times New Roman", Times, serif;
-    font-size: 14px; 
+    font-size: 12px; 
     text-align: left;
 }
 
@@ -48,7 +48,7 @@ table.trial_text_table {
     table-layout: fixed;
     border-collapse: separate;
     border-spacing: 3px 0px;
-    font-size: 14px;
+    font-size: 12px;
 }
 
 table.trial_text_table td {
@@ -65,7 +65,7 @@ table.trial_text_table td {
 table.output_table {
     table-layout: fixed;
     border-collapse: separate;
-    font-size: 14px;
+    font-size: 12px;
 }
 
 table.output_table td {
@@ -99,7 +99,7 @@ table.matching_response {
     border-width: 1px;
     background-color: white;
     font-family: "Times New Roman", Times, serif;
-    font-size: 14px; 
+    font-size: 12px; 
 }
 
 table.matching_response tr{
