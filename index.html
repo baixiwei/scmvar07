@@ -37,7 +37,7 @@ if ( !window.console ) { console={}; console.log=function(){}; }
 // assign values to all the vars defined above
 function setGlobalVars() {
 
-    testing     = true;         // change to false when going live
+    testing     = false;        // change to false when going live
     offline     = false;        // change to false when going live
     mode        = 'forced';     // set to forced when going live
     verbose     = testing;
@@ -60,8 +60,8 @@ function setGlobalVars() {
     if ( turk ) { table += "_turk"; }
     if ( testing ) { table += "_testing"; }
     if ( turk ) {
-        exclude_tables = [ "scmvar_02_turk", "scmvar_03", "scmvar_04", "scmvar_04_turk", "scmvar_05", "scmvar_05b", "scmvar_05c", "scmvar_07_turk" ];
-        // scmvar_07_turk is an earlier version of the current experiment; workers who worked on it cannot work on this current version
+        exclude_tables = [ "scmvar_02_turk", "scmvar_03", "scmvar_04", "scmvar_04_turk", "scmvar_05", "scmvar_05b", "scmvar_05c", "scmvar_07_turk", "scmvar_07b_turk" ];
+        // scmvar_07_turk and scmvar_07b_turk are earlier versions of the current experiment; workers who worked on them cannot work on this current version
     } else {
         exclude_tables = [];
     }
